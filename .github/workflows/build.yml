@@ -1,4 +1,4 @@
-name: Build and Release
+name: Build and Release EXE
 
 on:
   push:
@@ -8,52 +8,29 @@ on:
 jobs:
   build:
     runs-on: windows-latest
-    permissions:
-      contents: write
-      
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-      
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
 
-      - name: Install Dependencies
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          pip install pyinstaller openpyxl customtkinter Pillow numpy matplotlib
+          pip install -r requirements.txt
+          pip install pyinstaller
 
       - name: Build EXE
         run: |
-          pyinstaller --onefile --noconsole `
-          --name "Aggregate-Gradation-Analyzer" `
-          --icon="icon.ico" `
-          --add-data "logo.png;." `
-          --add-data "icon.ico;." `
-          --collect-all customtkinter `
-          --collect-all matplotlib `
-          --hidden-import=PIL `
-          --hidden-import=openpyxl `
-          main.py
-        # Note: Change 'main.py' above to the actual name of your python file
+          pyinstaller main.py --onefile --noconsole --name "GradationAnalysis" --icon=assets/icon.ico
 
-      - name: Get commit message
-        id: get_commit
-        run: |
-          $commitMsg = git log -1 --pretty=%B
-          echo "commit_message=$commitMsg" >> $env:GITHUB_OUTPUT
-        shell: pwsh
-
-      - name: Create Release
+      - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/*.exe
-          tag_name: ${{ github.ref_name }}
-          name: ${{ github.ref_name }}
-          body: ${{ steps.get_commit.outputs.commit_message }}
-          draft: false
-          prerelease: false
+          files: dist/GradationAnalysis.exe
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
