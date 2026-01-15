@@ -30,20 +30,28 @@ class TablePanel(ctk.CTkFrame):
 
     def _build_ui(self):
 
-        title = ctk.CTkLabel(self, text="Gradation Table", font=("Segoe UI", 16, "bold"))
+        title = ctk.CTkLabel(self, text="📊 Gradation Table", font=("Segoe UI", 16, "bold"))
         title.pack(pady=(10, 5))
 
         style = ttk.Style()
+        style.theme_use('clam')
         style.configure(
             "Treeview",
-            background="#0f172a",
+            background="#1e293b",
             foreground="white",
             rowheight=28,
-            fieldbackground="#0f172a",
-            bordercolor="#1e293b",
+            fieldbackground="#1e293b",
+            bordercolor="#334155",
             borderwidth=1
         )
-        style.map("Treeview", background=[("selected", "#1e293b")])
+        style.configure(
+            "Treeview.Heading",
+            background="#0f172a",
+            foreground="white",
+            borderwidth=1
+        )
+        style.map("Treeview", background=[("selected", "#0891b2")])
+        style.map("Treeview.Heading", background=[("active", "#1e293b")])
 
         self.table = ttk.Treeview(
             self,

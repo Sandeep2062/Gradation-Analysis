@@ -10,10 +10,15 @@ class GradationApp(ctk.CTk):
     def __init__(self):
         super().__init__()
 
+        # Set dark theme
+        ctk.set_appearance_mode("dark")
+        ctk.set_default_color_theme("blue")
+        
         # Window setup
         self.title("Gradation Analysis")
         self.geometry("1300x780")
         self.minsize(1200, 700)
+        self.configure(fg_color="#0f172a")
 
         # GRID LAYOUT
         self.grid_columnconfigure(0, weight=0)

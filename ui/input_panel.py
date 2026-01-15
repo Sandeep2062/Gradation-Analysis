@@ -21,16 +21,17 @@ class InputPanel(ctk.CTkFrame):
     def _build_ui(self):
         title = ctk.CTkLabel(
             self,
-            text="Input Settings",
-            font=("Segoe UI", 18, "bold")
+            text="⚙️ Input Settings",
+            font=("Segoe UI", 18, "bold"),
+            text_color="white"
         )
         title.pack(pady=(10, 5))
 
         # TOTAL WEIGHT INPUT
-        self.total_label = ctk.CTkLabel(self, text="Total Weight (gm):", font=("Segoe UI", 14))
+        self.total_label = ctk.CTkLabel(self, text="Total Weight (gm):", font=("Segoe UI", 14), text_color="#cbd5e1")
         self.total_label.pack(pady=(10, 0))
 
-        self.total_entry = ctk.CTkEntry(self, width=140, corner_radius=8)
+        self.total_entry = ctk.CTkEntry(self, width=140, corner_radius=8, fg_color="#1e293b", border_color="#0891b2", border_width=2)
         self.total_entry.insert(0, "2000")
         self.total_entry.pack(pady=5)
 
@@ -39,10 +40,12 @@ class InputPanel(ctk.CTkFrame):
         # RANDOM BUTTON
         self.random_btn = ctk.CTkButton(
             self,
-            text="Generate Random Curve",
+            text="🎲 Generate Random Curve",
             fg_color="#0891b2",
             hover_color="#0ea5e9",
             corner_radius=12,
+            text_color="white",
+            font=("Segoe UI", 13, "bold"),
             command=self._generate_random
         )
         self.random_btn.pack(pady=(20, 10))
@@ -51,7 +54,8 @@ class InputPanel(ctk.CTkFrame):
         self.fm_label = ctk.CTkLabel(
             self,
             text="Fineness Modulus: -",
-            font=("Segoe UI", 15)
+            font=("Segoe UI", 15),
+            text_color="#cbd5e1"
         )
         self.fm_label.pack(pady=(15, 5))
 

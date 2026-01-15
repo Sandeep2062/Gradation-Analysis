@@ -33,7 +33,7 @@ jobs:
         with:
           files: dist/GradationAnalysis.exe
           body: |
-            ## Gradation Analysis v${{ github.ref_name }}
+            ## Gradation Analysis ${{ github.ref_name }}
             
             ### Installation
             1. Download `GradationAnalysis.exe`
