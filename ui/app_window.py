@@ -112,6 +112,8 @@ class GradationApp(ctk.CTk):
         """
         Triggered when user switches tabs (Fine Aggregate / Sub-Base / Coarse Aggregate / CRM for Base)
         """
+        # Load table first to initialize retained values
+        self.table_panel.load_material(material_key)
+        # Then load other panels
         self.input_panel.load_material(material_key)
         self.graph_panel.load_material(material_key)
-        self.table_panel.load_material(material_key)

@@ -1,7 +1,7 @@
 class TotalWeightManager:
 
-    def __init__(self):
-        self.total_weight = 2000.0
+    def __init__(self, initial_weight=5000.0):
+        self.total_weight = initial_weight
 
     def set_total_weight(self, value):
         self.total_weight = value

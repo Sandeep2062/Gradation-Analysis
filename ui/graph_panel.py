@@ -60,14 +60,14 @@ class GraphPanel(ctk.CTkFrame):
         self.material_key = material_key
         self.data = materials[material_key]
 
-        # Data is already reversed in table_panel, get it from there
-        parent = self.master
-        self.sieve_labels = parent.table_panel.get_sieve_sizes()
-        lower_limits = np.array(parent.table_panel.get_limits()[0], dtype=float)
-        upper_limits = np.array(parent.table_panel.get_limits()[1], dtype=float)
+        # Load sieve data from config and reverse it (small to large, left to right)
+        sieve_labels = list(reversed(self.data["sieve_sizes"]))
+        lower_limits = np.array(list(reversed(self.data["lower_limits"])), dtype=float)
+        upper_limits = np.array(list(reversed(self.data["upper_limits"])), dtype=float)
         
-        n = len(self.sieve_labels)
+        n = len(sieve_labels)
         self.sieve_sizes = np.arange(n)  # 0, 1, 2, ... for x-axis positions
+        self.sieve_labels = sieve_labels  # Store labels for display
         self.lower = lower_limits
         self.upper = upper_limits
         # Initialize obtained curve with midpoint between upper and lower limits
