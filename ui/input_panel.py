@@ -1,18 +1,18 @@
 import customtkinter as ctk
-from core.total_weight import TotalWeightManager
 from core.random_generator import RandomCurveGenerator
 from core.fm_calculator import FMCalculator
 from config.materials import materials
+import numpy as np
 
 class InputPanel(ctk.CTkFrame):
 
-    def __init__(self, parent):
+    def __init__(self, parent, total_weight_manager):
         super().__init__(parent, fg_color="#1a1f2e", corner_radius=15)
 
         self.material_key = "fine"
         self.data = materials[self.material_key]
 
-        self.total_weight_manager = TotalWeightManager()
+        self.total_weight_manager = total_weight_manager
         self.random_gen = RandomCurveGenerator()
         self.fm_calc = FMCalculator()
 
@@ -80,11 +80,18 @@ class InputPanel(ctk.CTkFrame):
     def _generate_random(self):
         parent = self.master
 
-        # request limits from table panel
+        # request limits from table panel (original order)
         lower, upper = parent.table_panel.get_limits()
         sieve_sizes = parent.table_panel.get_sieve_sizes()
 
-        random_curve = self.random_gen.generate(sieve_sizes, lower, upper)
+        # Reverse to match graph display order (small to large left to right)
+        lower_reversed = list(reversed(lower))
+        upper_reversed = list(reversed(upper))
 
+        # Generate random curve in reversed order
+        random_curve = self.random_gen.generate(sieve_sizes, lower_reversed, upper_reversed)
+
+        # Update graph and table with reversed curve
         parent.graph_panel.update_curve(random_curve)
-        parent.table_panel.update_passing(random_curve)
+        parent.table_panel.update_passing(list(reversed(random_curve)))
+

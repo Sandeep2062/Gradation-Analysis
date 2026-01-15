@@ -14,7 +14,8 @@ class GraphPanel(ctk.CTkFrame):
         self.material_key = "fine"
         self.data = materials[self.material_key]
 
-        self.grad_engine = GradationEngine()
+        # Get shared total weight manager from parent app
+        self.grad_engine = GradationEngine(parent.total_weight_manager)
 
         self.sieve_sizes = []
         self.sieve_labels = []

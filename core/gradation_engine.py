@@ -3,8 +3,9 @@ from core.total_weight import TotalWeightManager
 
 class GradationEngine:
 
-    def __init__(self):
-        self.total_weight_manager = TotalWeightManager()
+    def __init__(self, total_weight_manager=None):
+        # Use provided manager or create new one (for backward compatibility)
+        self.total_weight_manager = total_weight_manager or TotalWeightManager()
 
     def passing_to_retained(self, passing):
         """

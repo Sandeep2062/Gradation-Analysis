@@ -4,6 +4,7 @@ from ui.input_panel import InputPanel
 from ui.graph_panel import GraphPanel
 from ui.table_panel import TablePanel
 from ui.footer import Footer
+from core.total_weight import TotalWeightManager
 import os
 import sys
 
@@ -11,6 +12,9 @@ class GradationApp(ctk.CTk):
 
     def __init__(self):
         super().__init__()
+
+        # Create shared total weight manager for all components
+        self.total_weight_manager = TotalWeightManager()
 
         # Set dark theme
         ctk.set_appearance_mode("dark")
@@ -36,7 +40,7 @@ class GradationApp(ctk.CTk):
         self.tabs.grid(row=0, column=0, columnspan=2, sticky="ew")
 
         # LEFT INPUT PANEL
-        self.input_panel = InputPanel(self)
+        self.input_panel = InputPanel(self, self.total_weight_manager)
         self.input_panel.grid(row=1, column=0, sticky="nsw", padx=10, pady=10)
 
         # RIGHT GRAPH PANEL
@@ -44,7 +48,7 @@ class GradationApp(ctk.CTk):
         self.graph_panel.grid(row=1, column=1, sticky="nsew", padx=10, pady=10)
 
         # BOTTOM TABLE PANEL
-        self.table_panel = TablePanel(self)
+        self.table_panel = TablePanel(self, self.total_weight_manager)
         self.table_panel.grid(row=2, column=0, columnspan=2, sticky="ew", padx=10, pady=(0,10))
 
         # FOOTER (Instagram/GitHub)

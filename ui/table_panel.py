@@ -1,21 +1,20 @@
 import customtkinter as ctk
 from tkinter import ttk
 from config.materials import materials
-from core.total_weight import TotalWeightManager
 from core.fm_calculator import FMCalculator
 from core.gradation_engine import GradationEngine
 
 class TablePanel(ctk.CTkFrame):
 
-    def __init__(self, parent):
+    def __init__(self, parent, total_weight_manager):
         super().__init__(parent, fg_color="#1a1f2e", corner_radius=12)
 
         self.material_key = "fine"
         self.data = materials[self.material_key]
 
         self.fm_calc = FMCalculator()
-        self.total_weight_manager = TotalWeightManager()
-        self.grad_engine = GradationEngine()
+        self.total_weight_manager = total_weight_manager
+        self.grad_engine = GradationEngine(total_weight_manager)
 
         self.sieve_sizes = []
         self.lower_limits = []
