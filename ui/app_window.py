@@ -6,22 +6,18 @@ from ui.table_panel import TablePanel
 from ui.footer import Footer
 import os
 import sys
-import subprocess
 
 class GradationApp(ctk.CTk):
 
     def __init__(self):
         super().__init__()
-        
-        # Get version from git tag
-        self.version = self._get_version()
 
         # Set dark theme
         ctk.set_appearance_mode("dark")
         ctk.set_default_color_theme("blue")
         
         # Window setup
-        self.title(f"Gradation Analysis {self.version}")
+        self.title("Gradation Analysis")
         self.geometry("1400x850")
         self.minsize(1200, 750)
         self.configure(fg_color="#0f1419")
@@ -56,6 +52,31 @@ class GradationApp(ctk.CTk):
 
         # Initialize with Fine Aggregate data
         self._on_material_change("fine")
+        
+        # Handle window close event
+        self.protocol("WM_DELETE_WINDOW", self._on_closing)
+
+    def _on_closing(self):
+        """
+        Properly close the application and all resources
+        """
+        try:
+            # Close matplotlib figure if it exists
+            if hasattr(self.graph_panel, 'figure'):
+                import matplotlib.pyplot as plt
+                plt.close(self.graph_panel.figure)
+        except:
+            pass
+        
+        try:
+            # Destroy the window
+            self.destroy()
+        except:
+            pass
+        
+        # Force exit to ensure no background processes remain
+        sys.exit(0)
+
 
     def _set_icon(self):
         """
@@ -90,17 +111,3 @@ class GradationApp(ctk.CTk):
         self.input_panel.load_material(material_key)
         self.graph_panel.load_material(material_key)
         self.table_panel.load_material(material_key)
-    def _get_version(self):
-        """
-        Get the latest git tag as version (e.g., v1.2)
-        Falls back to 'v0.0' if no tag is found
-        """
-        try:
-            version = subprocess.check_output(
-                ["git", "describe", "--tags", "--abbrev=0"],
-                stderr=subprocess.DEVNULL,
-                cwd=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            ).decode("utf-8").strip()
-            return version
-        except (subprocess.CalledProcessError, FileNotFoundError):
-            return "v0.0"

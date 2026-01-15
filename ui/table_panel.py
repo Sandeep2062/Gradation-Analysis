@@ -3,6 +3,7 @@ from tkinter import ttk
 from config.materials import materials
 from core.total_weight import TotalWeightManager
 from core.fm_calculator import FMCalculator
+from core.gradation_engine import GradationEngine
 
 class TablePanel(ctk.CTkFrame):
 
@@ -14,6 +15,7 @@ class TablePanel(ctk.CTkFrame):
 
         self.fm_calc = FMCalculator()
         self.total_weight_manager = TotalWeightManager()
+        self.grad_engine = GradationEngine()
 
         self.sieve_sizes = []
         self.lower_limits = []
@@ -101,9 +103,12 @@ class TablePanel(ctk.CTkFrame):
         # Initialize passing and retained with middle values between limits
         row_count = len(self.sieve_sizes)
         self.passing = [(self.lower_limits[i] + self.upper_limits[i]) / 2 for i in range(row_count)]
-        self.retained = [0] * row_count
+        
+        # Calculate retained from passing values using gradation engine
+        self.retained = self.grad_engine.passing_to_retained(self.passing)
 
         self._refresh_table()
+
 
     def _refresh_table(self):
         self.table.delete(*self.table.get_children())
