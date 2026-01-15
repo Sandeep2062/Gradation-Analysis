@@ -36,6 +36,9 @@ class InputPanel(ctk.CTkFrame):
         self.total_entry.pack(pady=8)
 
         self.total_entry.bind("<KeyRelease>", lambda e: self._on_change_total_weight())
+        
+        # Set initial total weight
+        self._on_change_total_weight()
 
         # RANDOM BUTTON
         self.random_btn = ctk.CTkButton(
@@ -80,18 +83,14 @@ class InputPanel(ctk.CTkFrame):
     def _generate_random(self):
         parent = self.master
 
-        # request limits from table panel (original order)
+        # Get limits from table panel (already in reversed order: small to large)
         lower, upper = parent.table_panel.get_limits()
         sieve_sizes = parent.table_panel.get_sieve_sizes()
 
-        # Reverse to match graph display order (small to large left to right)
-        lower_reversed = list(reversed(lower))
-        upper_reversed = list(reversed(upper))
+        # Generate random curve (no need to reverse - data is already in correct order)
+        random_curve = self.random_gen.generate(sieve_sizes, lower, upper)
 
-        # Generate random curve in reversed order
-        random_curve = self.random_gen.generate(sieve_sizes, lower_reversed, upper_reversed)
-
-        # Update graph and table with reversed curve
+        # Update graph and table with the curve
         parent.graph_panel.update_curve(random_curve)
-        parent.table_panel.update_passing(list(reversed(random_curve)))
+        parent.table_panel.update_passing(random_curve)
 

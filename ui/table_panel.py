@@ -94,10 +94,10 @@ class TablePanel(ctk.CTkFrame):
         self.material_key = material_key
         self.data = materials[material_key]
 
-        # Load sieve sizes and limits from config
-        self.sieve_sizes = self.data["sieve_sizes"]
-        self.lower_limits = self.data["lower_limits"]
-        self.upper_limits = self.data["upper_limits"]
+        # Load sieve sizes and limits from config and REVERSE them (small to large left to right)
+        self.sieve_sizes = list(reversed(self.data["sieve_sizes"]))
+        self.lower_limits = list(reversed(self.data["lower_limits"]))
+        self.upper_limits = list(reversed(self.data["upper_limits"]))
         
         # Initialize passing and retained with middle values between limits
         row_count = len(self.sieve_sizes)
