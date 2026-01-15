@@ -26,25 +26,14 @@ jobs:
       - name: Install dependencies and build
         run: |
           pip install -r requirements.txt pyinstaller
-          pyinstaller main.py --onefile --noconsole --name "GradationAnalysis" --icon=assets/icon.ico
+          pyinstaller GradationAnalysis.spec
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           files: dist/GradationAnalysis.exe
           body: |
-            ## Gradation Analysis ${{ github.ref_name }}
-            
-            ### Installation
-            1. Download `GradationAnalysis.exe`
-            2. Run the executable
-            
-            ### Features
-            - Gradation analysis for Fine Aggregate and Sub-Base materials
-            - Interactive graph manipulation
-            - Random curve generation within limits
-            - Total weight maintenance
-            - Copy weight retained values to clipboard
+            Gradation Analysis ${{ github.ref_name }}
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

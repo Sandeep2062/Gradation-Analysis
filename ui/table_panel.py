@@ -7,7 +7,7 @@ from core.fm_calculator import FMCalculator
 class TablePanel(ctk.CTkFrame):
 
     def __init__(self, parent):
-        super().__init__(parent, fg_color="#0f172a", corner_radius=12)
+        super().__init__(parent, fg_color="#1a1f2e", corner_radius=12)
 
         self.material_key = "fine"
         self.data = materials[self.material_key]
@@ -37,69 +37,46 @@ class TablePanel(ctk.CTkFrame):
         style.theme_use('clam')
         style.configure(
             "Treeview",
-            background="#1e293b",
+            background="#252d3d",
             foreground="white",
-            rowheight=28,
-            fieldbackground="#1e293b",
-            bordercolor="#334155",
-            borderwidth=1
+            rowheight=35,
+            fieldbackground="#252d3d",
+            bordercolor="#3d4857",
+            borderwidth=1,
+            font=("Segoe UI", 11)
         )
         style.configure(
             "Treeview.Heading",
-            background="#0f172a",
+            background="#1a1f2e",
             foreground="white",
-            borderwidth=1
+            borderwidth=1,
+            font=("Segoe UI", 11, "bold")
         )
         style.map("Treeview", background=[("selected", "#0891b2")])
-        style.map("Treeview.Heading", background=[("active", "#1e293b")])
+        style.map("Treeview.Heading", background=[("active", "#2d3748")])
 
         self.table = ttk.Treeview(
             self,
             columns=("sieve", "lower", "upper", "passing", "retained"),
             show="headings",
-            height=7
+            height=8
         )
 
-        self.table.heading("sieve", text="Sieve Size")
-        self.table.heading("lower", text="Lower Limit")
-        self.table.heading("upper", text="Upper Limit")
+        self.table.heading("sieve", text="Sieve Size (mm)")
+        self.table.heading("lower", text="Lower Limit (%)")
+        self.table.heading("upper", text="Upper Limit (%)")
         self.table.heading("passing", text="% Passing")
         self.table.heading("retained", text="Weight Retained (g)")
 
-        self.table.column("sieve", width=120, anchor="center")
-        self.table.column("lower", width=120, anchor="center")
-        self.table.column("upper", width=120, anchor="center")
-        self.table.column("passing", width=120, anchor="center")
+        self.table.column("sieve", width=140, anchor="center")
+        self.table.column("lower", width=140, anchor="center")
+        self.table.column("upper", width=140, anchor="center")
+        self.table.column("passing", width=140, anchor="center")
         self.table.column("retained", width=160, anchor="center")
 
-        self.table.pack(fill="x", padx=10, pady=10)
+        self.table.pack(fill="both", expand=True, padx=10, pady=10)
 
         self.table.bind("<Double-1>", self._begin_edit)
-
-        # Copy button for retained weights
-        copy_btn = ctk.CTkButton(
-            self,
-            text="📋 Copy Retained Weights",
-            fg_color="#0891b2",
-            hover_color="#0ea5e9",
-            corner_radius=8,
-            command=self._copy_retained_to_clipboard
-        )
-        copy_btn.pack(pady=(0, 10), padx=10)
-
-    def _copy_retained_to_clipboard(self):
-        """Copy retained weights to clipboard in a format suitable for Excel"""
-        if not self.retained:
-            return
-        
-        # Format: "value\nvalue\nvalue..."
-        retained_text = "\n".join([f"{val:.2f}" for val in self.retained])
-        self.clipboard_clear()
-        self.clipboard_append(retained_text)
-        self.update()
-        
-        # Show confirmation
-        print("✓ Retained weights copied to clipboard!")
 
     # ----------------------------------------------------
     # TABLE DATA INIT
@@ -134,10 +111,10 @@ class TablePanel(ctk.CTkFrame):
         for i in range(len(self.sieve_sizes)):
             row = (
                 self.sieve_sizes[i],
-                self.lower_limits[i],
-                self.upper_limits[i],
+                f"{self.lower_limits[i]:.0f}",
+                f"{self.upper_limits[i]:.0f}",
                 f"{self.passing[i]:.1f}",
-                f"{self.retained[i]:.1f}"
+                f"{int(round(self.retained[i]))}"
             )
             self.table.insert("", "end", values=row)
 
