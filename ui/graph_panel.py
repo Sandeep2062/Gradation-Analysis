@@ -37,6 +37,8 @@ class GraphPanel(ctk.CTkFrame):
         self.ax.tick_params(colors="white")
         self.ax.spines["bottom"].set_color("white")
         self.ax.spines["left"].set_color("white")
+        self.ax.spines["top"].set_color("#0f172a")
+        self.ax.spines["right"].set_color("#0f172a")
 
         self.ax.set_xlabel("Sieve Size", color="white")
         self.ax.set_ylabel("% Passing", color="white")
@@ -64,31 +66,35 @@ class GraphPanel(ctk.CTkFrame):
         self.upper = np.linspace(80, 95, n)
         self.obtained = np.linspace(65, 85, n)
 
-        self._draw()
+        self._redraw_graph()
 
     # ----------------------------------------------------
     # DRAW GRAPH
     # ----------------------------------------------------
 
-    def _draw(self):
+    def _redraw_graph(self):
+        """Redraws the entire graph with current data"""
         self.ax.clear()
         self.ax.set_facecolor('#0f172a')
         self.ax.tick_params(colors="white")
         self.ax.spines["bottom"].set_color("white")
         self.ax.spines["left"].set_color("white")
+        self.ax.spines["top"].set_color("#0f172a")
+        self.ax.spines["right"].set_color("#0f172a")
 
         # lower/upper limit curves
-        self.ax.plot(self.sieve_sizes, self.lower, color="#94a3b8", linewidth=1.2, linestyle="--", alpha=0.7)
-        self.ax.plot(self.sieve_sizes, self.upper, color="#94a3b8", linewidth=1.2, linestyle="--", alpha=0.7)
+        self.ax.plot(self.sieve_sizes, self.lower, color="#94a3b8", linewidth=1.2, linestyle="--", alpha=0.7, label="Lower Limit")
+        self.ax.plot(self.sieve_sizes, self.upper, color="#94a3b8", linewidth=1.2, linestyle="--", alpha=0.7, label="Upper Limit")
 
         # obtained curve (cyan)
-        self.ax.plot(self.sieve_sizes, self.obtained, color="#06b6d4", linewidth=2.5)
+        self.ax.plot(self.sieve_sizes, self.obtained, color="#06b6d4", linewidth=2.5, label="Obtained")
 
         # draggable points
-        self.ax.scatter(self.sieve_sizes, self.obtained, color="#06b6d4", s=50, edgecolor="white")
+        self.ax.scatter(self.sieve_sizes, self.obtained, color="#06b6d4", s=50, edgecolor="white", zorder=5)
 
         self.ax.set_xlabel("Sieve Index", color="white")
         self.ax.set_ylabel("% Passing", color="white")
+        self.ax.legend(facecolor="#1e293b", edgecolor="white", labelcolor="white")
 
         self.canvas.draw()
 
@@ -123,7 +129,7 @@ class GraphPanel(ctk.CTkFrame):
         # Update retained + table
         self._sync_back()
 
-        self._draw()
+        self._redraw_graph()
 
     def _on_release(self, event):
         self.drag_index = None
@@ -152,4 +158,4 @@ class GraphPanel(ctk.CTkFrame):
     def update_curve(self, new_curve):
         self.obtained = np.array(new_curve)
         self._sync_back()
-        self._draw()
+        self._redraw_graph()
