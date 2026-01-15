@@ -116,6 +116,28 @@ class GraphPanel(ctk.CTkFrame):
 
         self.canvas.draw()
 
+    def _fast_update_curve(self):
+        """Fast update of curve during dragging - only update line and scatter without full redraw"""
+        # Find and update the obtained curve line (last plotted line, or search by color)
+        lines = self.ax.get_lines()
+        scatter_artists = self.ax.collections
+        
+        # Update the obtained curve line (usually the cyan/last data line)
+        for line in lines:
+            if line.get_color() == '#06b6d4':  # cyan color for obtained curve
+                line.set_data(self.sieve_sizes, self.obtained)
+                break
+        
+        # Update scatter points
+        for scatter in scatter_artists:
+            if hasattr(scatter, 'get_facecolor') and len(scatter.get_facecolor()) > 0:
+                if scatter.get_facecolor()[0][2] > 0.8:  # Check if it's the cyan scatter
+                    scatter.set_offsets(np.c_[self.sieve_sizes, self.obtained])
+                    break
+        
+        # Quick redraw without layout recalculation
+        self.canvas.draw_idle()
+
     # ----------------------------------------------------
     # DRAGGING LOGIC
     # ----------------------------------------------------
@@ -147,7 +169,8 @@ class GraphPanel(ctk.CTkFrame):
         # Update retained + table
         self._sync_back()
 
-        self._redraw_graph()
+        # Fast redraw - only update the curve line and points without full layout recalculation
+        self._fast_update_curve()
 
     def _on_release(self, event):
         self.drag_index = None
