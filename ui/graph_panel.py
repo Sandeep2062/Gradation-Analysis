@@ -159,11 +159,14 @@ class GraphPanel(ctk.CTkFrame):
     def _sync_back(self):
         parent = self.master
 
+        # Reverse obtained curve to match table's original order (largest to smallest)
+        table_passing = list(reversed(self.obtained))
+        
         # update table
-        parent.table_panel.update_passing(list(self.obtained))
+        parent.table_panel.update_passing(table_passing)
 
-        # calculate retained based on passing
-        retained = self.grad_engine.passing_to_retained(self.obtained)
+        # calculate retained based on passing in original order
+        retained = self.grad_engine.passing_to_retained(table_passing)
 
         # update retained in table
         parent.table_panel.update_retained(retained)
