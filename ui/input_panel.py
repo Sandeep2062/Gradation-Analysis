@@ -79,6 +79,16 @@ class InputPanel(ctk.CTkFrame):
             return
 
         self.total_weight_manager.set_total_weight(weight)
+        
+        # Trigger table update with recalculated retained values
+        parent = self.master
+        if hasattr(parent, 'table_panel'):
+            # Recalculate retained values based on new total weight
+            passing = parent.table_panel.passing
+            retained = parent.table_panel.grad_engine.passing_to_retained(passing)
+            parent.table_panel.update_retained(retained)
+            # Update FM display
+            self.update_fm(retained)
 
     def _generate_random(self):
         parent = self.master

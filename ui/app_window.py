@@ -34,6 +34,7 @@ class GradationApp(ctk.CTk):
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(1, weight=1)
         self.grid_rowconfigure(2, weight=0)
+        self.grid_rowconfigure(3, weight=0)
 
         # TOP TABS
         self.tabs = TopTabs(self, self._on_material_change)
@@ -51,8 +52,9 @@ class GradationApp(ctk.CTk):
         self.table_panel = TablePanel(self, self.total_weight_manager)
         self.table_panel.grid(row=2, column=0, columnspan=2, sticky="ew", padx=10, pady=(0,10))
 
-        # FOOTER (Instagram/GitHub)
-        Footer(self).place(relx=1.0, rely=1.0, anchor="se")
+        # FOOTER (Instagram/GitHub) - grid instead of place to avoid overlap
+        footer = Footer(self)
+        footer.grid(row=3, column=0, columnspan=2, sticky="e", padx=10, pady=(5,5))
 
         # Initialize with Fine Aggregate data
         self._on_material_change("fine")
