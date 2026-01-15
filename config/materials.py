@@ -6,6 +6,9 @@ fine_aggregate = {
     "lower_column": "G",
     "upper_column": "H",
     "total_weight_cell": "E17",
+    "sieve_sizes": [10.00, 4.75, 2.38, 1.18, 0.60, 0.30, 0.15, "Pan"],
+    "lower_limits": [100.00, 90.00, 75.00, 55.00, 35.00, 8.00, 0.00, 0.00],
+    "upper_limits": [100.00, 100.00, 100.00, 90.00, 59.00, 30.00, 10.00, 0.00],
 }
 
 sub_base = {
@@ -16,6 +19,9 @@ sub_base = {
     "lower_column": "G",
     "upper_column": "H",
     "total_weight_cell": "B27",
+    "sieve_sizes": [75.00, 53.00, 28.50, 9.50, 4.750, 2.360, 0.425, 0.075, "Pan"],
+    "lower_limits": [100.00, 80.00, 55.00, 35.00, 25.00, 20.00, 10.00, 0.00, 0.00],
+    "upper_limits": [100.00, 100.00, 90.00, 65.00, 55.00, 40.00, 15.00, 5.00, 0.00],
 }
 
 materials = {

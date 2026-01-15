@@ -45,6 +45,9 @@ class GradationApp(ctk.CTk):
         # FOOTER (Instagram/GitHub)
         Footer(self).place(relx=1.0, rely=1.0, anchor="se")
 
+        # Initialize with Fine Aggregate data
+        self._on_material_change("fine")
+
     def _on_material_change(self, material_key):
         """
         Triggered when user switches tabs (Fine Aggregate / Sub-Base)

@@ -17,6 +17,7 @@ class GraphPanel(ctk.CTkFrame):
         self.grad_engine = GradationEngine()
 
         self.sieve_sizes = []
+        self.sieve_labels = []
         self.lower = []
         self.upper = []
         self.obtained = []
@@ -58,13 +59,18 @@ class GraphPanel(ctk.CTkFrame):
         self.material_key = material_key
         self.data = materials[material_key]
 
-        # basic placeholders
-        n = len(self.data["sieve_range"])
-
-        self.sieve_sizes = np.linspace(1, n, n)
-        self.lower = np.linspace(50, 70, n)
-        self.upper = np.linspace(80, 95, n)
-        self.obtained = np.linspace(65, 85, n)
+        # Load actual sieve data from config
+        sieve_labels = self.data["sieve_sizes"]
+        lower_limits = np.array(self.data["lower_limits"], dtype=float)
+        upper_limits = np.array(self.data["upper_limits"], dtype=float)
+        
+        n = len(sieve_labels)
+        self.sieve_sizes = np.arange(n)  # 0, 1, 2, ... for x-axis positions
+        self.sieve_labels = sieve_labels  # Store labels for display
+        self.lower = lower_limits
+        self.upper = upper_limits
+        # Initialize obtained curve with midpoint between upper and lower limits
+        self.obtained = (self.lower + self.upper) / 2
 
         self._redraw_graph()
 
@@ -92,9 +98,14 @@ class GraphPanel(ctk.CTkFrame):
         # draggable points
         self.ax.scatter(self.sieve_sizes, self.obtained, color="#06b6d4", s=50, edgecolor="white", zorder=5)
 
-        self.ax.set_xlabel("Sieve Index", color="white")
+        # Set x-axis with sieve size labels
+        self.ax.set_xticks(self.sieve_sizes)
+        self.ax.set_xticklabels(self.sieve_labels, rotation=45, ha='right')
+        self.ax.set_xlabel("Sieve Size (mm)", color="white")
         self.ax.set_ylabel("% Passing", color="white")
         self.ax.legend(facecolor="#1e293b", edgecolor="white", labelcolor="white")
+        self.ax.set_ylim(0, 105)
+        self.figure.tight_layout()
 
         self.canvas.draw()
 

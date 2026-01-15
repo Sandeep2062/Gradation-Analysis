@@ -76,6 +76,31 @@ class TablePanel(ctk.CTkFrame):
 
         self.table.bind("<Double-1>", self._begin_edit)
 
+        # Copy button for retained weights
+        copy_btn = ctk.CTkButton(
+            self,
+            text="📋 Copy Retained Weights",
+            fg_color="#0891b2",
+            hover_color="#0ea5e9",
+            corner_radius=8,
+            command=self._copy_retained_to_clipboard
+        )
+        copy_btn.pack(pady=(0, 10), padx=10)
+
+    def _copy_retained_to_clipboard(self):
+        """Copy retained weights to clipboard in a format suitable for Excel"""
+        if not self.retained:
+            return
+        
+        # Format: "value\nvalue\nvalue..."
+        retained_text = "\n".join([f"{val:.2f}" for val in self.retained])
+        self.clipboard_clear()
+        self.clipboard_append(retained_text)
+        self.update()
+        
+        # Show confirmation
+        print("✓ Retained weights copied to clipboard!")
+
     # ----------------------------------------------------
     # TABLE DATA INIT
     # ----------------------------------------------------
@@ -91,15 +116,15 @@ class TablePanel(ctk.CTkFrame):
         self.material_key = material_key
         self.data = materials[material_key]
 
-        # Define ranges
-        row_count = len(self.data["sieve_range"])
-
-        # Reset internal arrays
-        self.sieve_sizes = [0] * row_count
-        self.lower_limits = [0] * row_count
-        self.upper_limits = [0] * row_count
-        self.passing = [70] * row_count
-        self.retained = [100] * row_count
+        # Load sieve sizes and limits from config
+        self.sieve_sizes = self.data["sieve_sizes"]
+        self.lower_limits = self.data["lower_limits"]
+        self.upper_limits = self.data["upper_limits"]
+        
+        # Initialize passing and retained with middle values between limits
+        row_count = len(self.sieve_sizes)
+        self.passing = [(self.lower_limits[i] + self.upper_limits[i]) / 2 for i in range(row_count)]
+        self.retained = [0] * row_count
 
         self._refresh_table()
 
