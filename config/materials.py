@@ -20,8 +20,8 @@ coarse_aggregate = {
     "upper_column": "H",
     "total_weight_cell": "B27",
     "sieve_sizes": [40.00, 20.00, 10.00, 4.75, "Pan"],
-    "lower_limits": [100.00, 90.00, 25.00, 0.00, 0.00],
-    "upper_limits": [100.00, 100.00, 35.00, 10.00, 0.00],
+    "lower_limits": [100.00, 85.00, 0.00, 0.00, 0.00],
+    "upper_limits": [100.00, 100.00, 20.00, 5.00, 0.00],
 }
 
 sub_base = {
