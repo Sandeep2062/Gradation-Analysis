@@ -54,11 +54,11 @@ class GraphPanel(ctk.CTkFrame):
         self.canvas.mpl_connect("button_press_event", self._on_click)
         self.canvas.mpl_connect("motion_notify_event", self._on_drag)
         self.canvas.mpl_connect("button_release_event", self._on_release)
+        self.canvas.mpl_connect("key_press_event", self._on_mpl_key_press)  # Matplotlib key events
         
-        # Bind keyboard events to the canvas
-        self.canvas.get_tk_widget().bind("<Up>", self._on_key_up)
-        self.canvas.get_tk_widget().bind("<Down>", self._on_key_down)
-        self.canvas.get_tk_widget().focus_set()
+        # Bind keyboard events at the Tkinter level (parent window)
+        self.master.bind("<Up>", self._on_key_up_tkinter, add=True)
+        self.master.bind("<Down>", self._on_key_down_tkinter, add=True)
 
     def _build_controls(self):
         """Build control panel for precise point adjustment"""
@@ -79,6 +79,8 @@ class GraphPanel(ctk.CTkFrame):
         )
         self.point_value_entry.pack(side="left", padx=5, pady=8)
         self.point_value_entry.bind("<Return>", self._on_entry_confirm)
+        self.point_value_entry.bind("<Up>", self._on_entry_key_up)
+        self.point_value_entry.bind("<Down>", self._on_entry_key_down)
         
         info_label = ctk.CTkLabel(
             control_frame, 
@@ -236,6 +238,21 @@ class GraphPanel(ctk.CTkFrame):
             self._sync_back()
             self._redraw_graph()
 
+    def _on_key_up_tkinter(self, event):
+        """Tkinter version of Up arrow handler"""
+        return self._on_key_up(event)
+
+    def _on_key_down_tkinter(self, event):
+        """Tkinter version of Down arrow handler"""
+        return self._on_key_down(event)
+
+    def _on_mpl_key_press(self, event):
+        """Handle matplotlib key press events"""
+        if event.key == "up":
+            self._on_key_up(event)
+        elif event.key == "down":
+            self._on_key_down(event)
+
     def _update_entry_field(self):
         """Update the input field to show the selected point's value"""
         if self.selected_index is not None:
@@ -243,6 +260,8 @@ class GraphPanel(ctk.CTkFrame):
             value = self.obtained[self.selected_index]
             self.point_value_entry.delete(0, "end")
             self.point_value_entry.insert(0, f"{value:.1f}% ({sieve_label}mm)")
+            # Focus on entry field so keyboard events work
+            self.point_value_entry.focus()
 
     def _on_entry_confirm(self, event):
         """Handle Enter key in the input field to set point value directly"""
@@ -262,6 +281,28 @@ class GraphPanel(ctk.CTkFrame):
         self._update_entry_field()
         self._sync_back()
         self._redraw_graph()
+
+    def _on_entry_key_up(self, event):
+        """Handle Up arrow key in entry field"""
+        if self.selected_index is not None:
+            new_val = self.obtained[self.selected_index] + 1
+            new_val = max(self.lower[self.selected_index], min(self.upper[self.selected_index], new_val))
+            self.obtained[self.selected_index] = new_val
+            self._update_entry_field()
+            self._sync_back()
+            self._redraw_graph()
+        return "break"  # Prevent default behavior
+
+    def _on_entry_key_down(self, event):
+        """Handle Down arrow key in entry field"""
+        if self.selected_index is not None:
+            new_val = self.obtained[self.selected_index] - 1
+            new_val = max(self.lower[self.selected_index], min(self.upper[self.selected_index], new_val))
+            self.obtained[self.selected_index] = new_val
+            self._update_entry_field()
+            self._sync_back()
+            self._redraw_graph()
+        return "break"  # Prevent default behavior
 
     # ----------------------------------------------------
     # SYNC TO TABLE + FM
