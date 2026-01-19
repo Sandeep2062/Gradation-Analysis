@@ -205,16 +205,9 @@ class GraphPanel(ctk.CTkFrame):
 
     def update_curve(self, new_curve):
         """Update curve from table edits"""
-        parent = self.master
-        # Set flag on table to prevent circular updates
-        parent.table_panel.updating_from_graph = True
-        
         # new_curve is in table order (largest to smallest)
         # Reverse to graph order (smallest to largest for left-to-right display)
         self.obtained = np.array(list(reversed(new_curve)), dtype=float)
         self.updating_from_table = True
         self._redraw_graph()
         self.updating_from_table = False
-        
-        # Reset flag on table
-        parent.table_panel.updating_from_graph = False
