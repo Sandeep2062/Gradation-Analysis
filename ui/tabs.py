@@ -8,7 +8,8 @@ class TopTabs(ctk.CTkFrame):
         self.callback = callback
         self.materials = {
             "fine": "Fine Aggregate",
-            "coarse": "Coarse Aggregate",
+            "coarse1": "Coarse Aggregate 1",
+            "coarse2": "Coarse Aggregate 2",
             "subbase": "Sub-Base",
             "crm": "CRM for Base"
         }
@@ -19,13 +20,14 @@ class TopTabs(ctk.CTkFrame):
         self._build_tabs()
 
     def _build_tabs(self):
-        # Dynamic grid configuration for 4 tabs
-        for i in range(4):
+        # Dynamic grid configuration for 5 tabs
+        for i in range(5):
             self.grid_columnconfigure(i, weight=1)
 
         tabs_data = [
             ("fine", "⚙️ Fine Aggregate"),
-            ("coarse", "🏔️ Coarse Aggregate"),
+            ("coarse1", "🏔️ Coarse Aggregate 1"),
+            ("coarse2", "🏔️ Coarse Aggregate 2"),
             ("subbase", "🏗️ Sub-Base"),
             ("crm", "🔨 CRM for Base")
         ]

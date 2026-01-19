@@ -172,9 +172,13 @@ class TablePanel(ctk.CTkFrame):
             # Recalculate retained from passing
             self.retained = self.grad_engine.passing_to_retained(self.passing)
         elif col_index == 4:  # Weight retained edited
-            # Convert retained weight back to passing %
+            # Update retained first
             self.retained[row_index] = new_val
+            # Then recalculate all passing values from retained using inverse formula
             self.passing = self._retained_to_passing(self.retained)
+            # Clamp passing to limits
+            for i in range(len(self.passing)):
+                self.passing[i] = max(self.lower_limits[i], min(self.upper_limits[i], self.passing[i]))
 
         self._refresh_table()
 
@@ -194,8 +198,12 @@ class TablePanel(ctk.CTkFrame):
         # Get total weight
         total_wt = self.total_weight_manager.get_total_weight()
         
+        if total_wt <= 0:
+            return [50.0] * len(retained)
+        
         # Convert retained weights to fractions
         retained_frac = retained / total_wt
+        retained_frac = np.clip(retained_frac, 0, None)
         
         # Convert retained fractions to passing fractions
         passing_frac = np.zeros_like(retained_frac)
@@ -204,8 +212,8 @@ class TablePanel(ctk.CTkFrame):
         for i in range(1, len(retained_frac)):
             passing_frac[i] = passing_frac[i-1] - retained_frac[i]
         
-        # Clip to valid range and convert to percentages
-        passing_frac = np.clip(passing_frac, 0, 100)
+        # Clip to valid range [0, 1] and convert to percentages [0, 100]
+        passing_frac = np.clip(passing_frac, 0, 1)
         passing = passing_frac * 100
         
         return passing.tolist()

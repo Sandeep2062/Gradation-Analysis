@@ -65,7 +65,8 @@ crm_base = {
 
 materials = {
     "fine": fine_aggregate,
-    "coarse": coarse_aggregate1,
+    "coarse1": coarse_aggregate1,
+    "coarse2": coarse_aggregate2,
     "subbase": sub_base,
     "crm": crm_base
 }
