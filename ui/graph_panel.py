@@ -60,14 +60,14 @@ class GraphPanel(ctk.CTkFrame):
         self.material_key = material_key
         self.data = materials[material_key]
 
-        # Load sieve data from config and reverse it (small to large, left to right)
-        sieve_labels = list(reversed(self.data["sieve_sizes"]))
-        lower_limits = np.array(list(reversed(self.data["lower_limits"])), dtype=float)
-        upper_limits = np.array(list(reversed(self.data["upper_limits"])), dtype=float)
+        # Load sieve data from config in ORIGINAL order (largest to smallest) for right-to-left display
+        sieve_labels = self.data["sieve_sizes"]
+        lower_limits = np.array(self.data["lower_limits"], dtype=float)
+        upper_limits = np.array(self.data["upper_limits"], dtype=float)
         
         n = len(sieve_labels)
         self.sieve_sizes = np.arange(n)  # 0, 1, 2, ... for x-axis positions
-        self.sieve_labels = sieve_labels  # Store labels for display
+        self.sieve_labels = sieve_labels  # Store labels for display (right to left: large to small)
         self.lower = lower_limits
         self.upper = upper_limits
         # Initialize obtained curve with midpoint between upper and lower limits
@@ -182,8 +182,8 @@ class GraphPanel(ctk.CTkFrame):
     def _sync_back(self):
         parent = self.master
 
-        # Reverse obtained curve to match table's original order (largest to smallest)
-        table_passing = list(reversed(self.obtained))
+        # obtained curve is already in table order (largest to smallest, same as table)
+        table_passing = list(self.obtained)
         
         # update table
         parent.table_panel.update_passing(table_passing)
@@ -200,8 +200,7 @@ class GraphPanel(ctk.CTkFrame):
     # ----------------------------------------------------
 
     def update_curve(self, new_curve):
-        """Update curve from table edits - reverse from table order to graph order"""
-        # new_curve is in table order (largest to smallest)
-        # Need to reverse it to graph order (smallest to largest)
-        self.obtained = np.array(list(reversed(new_curve)))
+        """Update curve from table edits"""
+        # new_curve is in table order (largest to smallest) which is also the graph order now
+        self.obtained = np.array(new_curve, dtype=float)
         self._redraw_graph()

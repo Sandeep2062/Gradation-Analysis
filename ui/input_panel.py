@@ -97,14 +97,17 @@ class InputPanel(ctk.CTkFrame):
         lower, upper = parent.table_panel.get_limits()
         sieve_sizes = parent.table_panel.get_sieve_sizes()
 
-        # Reverse for graph display (small to large left to right)
-        lower_reversed = list(reversed(lower))
-        upper_reversed = list(reversed(upper))
+        # Generate random curve in table order (largest to smallest for right-to-left display)
+        random_curve = self.random_gen.generate(sieve_sizes, lower, upper)
 
-        # Generate random curve in reversed order for graph
-        random_curve = self.random_gen.generate(sieve_sizes, lower_reversed, upper_reversed)
-
-        # Update graph with reversed curve
+        # Update table with new passing curve
+        parent.table_panel.update_passing(random_curve)
+        
+        # Update graph
         parent.graph_panel.update_curve(random_curve)
-        # Sync will handle reversing back to table's order
+        
+        # Recalculate retained and update FM
+        retained = parent.table_panel.grad_engine.passing_to_retained(random_curve)
+        parent.table_panel.update_retained(retained)
+        self.update_fm(retained)
 
