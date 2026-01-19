@@ -165,10 +165,16 @@ class TablePanel(ctk.CTkFrame):
         row_index = self.table.index(row_id)
 
         # update data arrays
-        if col_index == 3:
+        if col_index == 3:  # Passing % edited
+            # Clamp passing % to limits
+            new_val = max(self.lower_limits[row_index], min(self.upper_limits[row_index], new_val))
             self.passing[row_index] = new_val
-        elif col_index == 4:
+            # Recalculate retained from passing
+            self.retained = self.grad_engine.passing_to_retained(self.passing)
+        elif col_index == 4:  # Weight retained edited
+            # Convert retained weight back to passing %
             self.retained[row_index] = new_val
+            self.passing = self._retained_to_passing(self.retained)
 
         self._refresh_table()
 
@@ -176,6 +182,33 @@ class TablePanel(ctk.CTkFrame):
         parent = self.master
         parent.graph_panel.update_curve(self.passing)
         parent.input_panel.update_fm(self.retained)
+
+    def _retained_to_passing(self, retained_weights):
+        """
+        Convert retained weights back to passing percentages.
+        This is the inverse of passing_to_retained.
+        """
+        import numpy as np
+        retained = np.array(retained_weights, dtype=float)
+        
+        # Get total weight
+        total_wt = self.total_weight_manager.get_total_weight()
+        
+        # Convert retained weights to fractions
+        retained_frac = retained / total_wt
+        
+        # Convert retained fractions to passing fractions
+        passing_frac = np.zeros_like(retained_frac)
+        passing_frac[0] = 1 - retained_frac[0]
+        
+        for i in range(1, len(retained_frac)):
+            passing_frac[i] = passing_frac[i-1] - retained_frac[i]
+        
+        # Clip to valid range and convert to percentages
+        passing_frac = np.clip(passing_frac, 0, 100)
+        passing = passing_frac * 100
+        
+        return passing.tolist()
 
     # ----------------------------------------------------
     # PUBLIC API

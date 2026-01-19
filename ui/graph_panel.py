@@ -200,6 +200,8 @@ class GraphPanel(ctk.CTkFrame):
     # ----------------------------------------------------
 
     def update_curve(self, new_curve):
-        self.obtained = np.array(new_curve)
-        self._sync_back()
+        """Update curve from table edits - reverse from table order to graph order"""
+        # new_curve is in table order (largest to smallest)
+        # Need to reverse it to graph order (smallest to largest)
+        self.obtained = np.array(list(reversed(new_curve)))
         self._redraw_graph()
