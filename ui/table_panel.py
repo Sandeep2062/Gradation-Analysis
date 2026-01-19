@@ -21,6 +21,7 @@ class TablePanel(ctk.CTkFrame):
         self.upper_limits = []
         self.passing = []
         self.retained = []
+        self.updating_from_graph = False  # Flag to prevent circular updates
 
         self._build_ui()
         self._init_table_data()
@@ -154,6 +155,10 @@ class TablePanel(ctk.CTkFrame):
         entry.bind("<FocusOut>", lambda e: self._finish_edit(entry, row_id, col_index))
 
     def _finish_edit(self, entry, row_id, col_index):
+        # Skip if we're updating from graph (prevent circular updates)
+        if self.updating_from_graph:
+            return
+            
         new_val = entry.get().strip()
         entry.destroy()
 
@@ -179,6 +184,8 @@ class TablePanel(ctk.CTkFrame):
             # Clamp passing to limits
             for i in range(len(self.passing)):
                 self.passing[i] = max(self.lower_limits[i], min(self.upper_limits[i], self.passing[i]))
+            # Recalculate retained again with clamped passing to stay consistent
+            self.retained = self.grad_engine.passing_to_retained(self.passing)
 
         self._refresh_table()
 

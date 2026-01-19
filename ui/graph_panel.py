@@ -24,6 +24,7 @@ class GraphPanel(ctk.CTkFrame):
         self.obtained = []
 
         self.drag_index = None
+        self.updating_from_table = False  # Flag to prevent circular updates
 
         self._build_graph()
 
@@ -180,19 +181,22 @@ class GraphPanel(ctk.CTkFrame):
     # ----------------------------------------------------
 
     def _sync_back(self):
+        # Skip if we're updating from table (prevent circular updates)
+        if self.updating_from_table:
+            return
+            
         parent = self.master
 
-        # obtained curve is already in table order (largest to smallest, same as table)
-        table_passing = list(self.obtained)
+        # Reverse obtained curve from graph order (small to large) back to table order (large to small)
+        table_passing = list(reversed(self.obtained))
         
-        # update table
-        parent.table_panel.update_passing(table_passing)
-
-        # calculate retained based on passing in original order
+        # Calculate retained based on passing
         retained = self.grad_engine.passing_to_retained(table_passing)
 
-        # update retained in table
-        parent.table_panel.update_retained(retained)
+        # Update both passing and retained in table atomically
+        parent.table_panel.passing = table_passing
+        parent.table_panel.retained = retained
+        parent.table_panel._refresh_table()
 
         # update FM
         parent.input_panel.update_fm(retained)
@@ -201,7 +205,16 @@ class GraphPanel(ctk.CTkFrame):
 
     def update_curve(self, new_curve):
         """Update curve from table edits"""
+        parent = self.master
+        # Set flag on table to prevent circular updates
+        parent.table_panel.updating_from_graph = True
+        
         # new_curve is in table order (largest to smallest)
         # Reverse to graph order (smallest to largest for left-to-right display)
         self.obtained = np.array(list(reversed(new_curve)), dtype=float)
+        self.updating_from_table = True
         self._redraw_graph()
+        self.updating_from_table = False
+        
+        # Reset flag on table
+        parent.table_panel.updating_from_graph = False
