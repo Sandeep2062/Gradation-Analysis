@@ -11,7 +11,7 @@ fine_aggregate = {
     "upper_limits": [100.00, 100.00, 100.00, 90.00, 59.00, 30.00, 10.00, 0.00],
 }
 
-coarse_aggregate = {
+coarse_aggregate1 = {
     "sieve_range": range(18, 22),
     "sieve_column": "A",
     "weight_column": "B",
@@ -22,6 +22,19 @@ coarse_aggregate = {
     "sieve_sizes": [40.00, 20.00, 10.00, 4.75, "Pan"],
     "lower_limits": [100.00, 85.00, 0.00, 0.00, 0.00],
     "upper_limits": [100.00, 100.00, 20.00, 5.00, 0.00],
+}
+
+coarse_aggregate2 = {
+    "sieve_range": range(18, 22),
+    "sieve_column": "A",
+    "weight_column": "B",
+    "passing_column": "F",
+    "lower_column": "G",
+    "upper_column": "H",
+    "total_weight_cell": "B27",
+    "sieve_sizes": [40.00, 20.00, 10.00, 4.75, "Pan"],
+    "lower_limits": [100.00, 90.00, 25.00, 0.00, 0.00],
+    "upper_limits": [100.00, 100.00, 35.00, 10.00, 0.00],
 }
 
 sub_base = {
@@ -52,7 +65,7 @@ crm_base = {
 
 materials = {
     "fine": fine_aggregate,
-    "coarse": coarse_aggregate,
+    "coarse": coarse_aggregate1,
     "subbase": sub_base,
     "crm": crm_base
 }
