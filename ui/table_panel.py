@@ -172,14 +172,20 @@ class TablePanel(ctk.CTkFrame):
             # Recalculate retained from passing
             self.retained = self.grad_engine.passing_to_retained(self.passing)
         elif col_index == 4:  # Weight retained edited
-            # Update retained first
+            # Clamp retained to non-negative
+            new_val = max(0, new_val)
+            
+            # Update retained at this sieve
             self.retained[row_index] = new_val
-            # Then recalculate all passing values from retained using inverse formula
+            
+            # Recalculate passing from retained
             self.passing = self._retained_to_passing(self.retained)
-            # Clamp passing to limits
+            
+            # Clamp all passing values to their limits
             for i in range(len(self.passing)):
                 self.passing[i] = max(self.lower_limits[i], min(self.upper_limits[i], self.passing[i]))
-            # Recalculate retained again with clamped passing to stay consistent
+            
+            # Recalculate retained to match the clamped passing
             self.retained = self.grad_engine.passing_to_retained(self.passing)
 
         self._refresh_table()
