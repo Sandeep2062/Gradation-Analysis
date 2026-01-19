@@ -219,8 +219,8 @@ class GraphPanel(ctk.CTkFrame):
     def _on_key_up(self, event):
         """Handle Up arrow key to increase selected point's passing %"""
         if self.selected_index is not None:
-            # Increase passing % by 1
-            new_val = self.obtained[self.selected_index] + 1
+            # Increase passing % by 0.1
+            new_val = self.obtained[self.selected_index] + 0.1
             new_val = max(self.lower[self.selected_index], min(self.upper[self.selected_index], new_val))
             self.obtained[self.selected_index] = new_val
             self._update_entry_field()
@@ -230,8 +230,8 @@ class GraphPanel(ctk.CTkFrame):
     def _on_key_down(self, event):
         """Handle Down arrow key to decrease selected point's passing %"""
         if self.selected_index is not None:
-            # Decrease passing % by 1
-            new_val = self.obtained[self.selected_index] - 1
+            # Decrease passing % by 0.1
+            new_val = self.obtained[self.selected_index] - 0.1
             new_val = max(self.lower[self.selected_index], min(self.upper[self.selected_index], new_val))
             self.obtained[self.selected_index] = new_val
             self._update_entry_field()
@@ -285,7 +285,7 @@ class GraphPanel(ctk.CTkFrame):
     def _on_entry_key_up(self, event):
         """Handle Up arrow key in entry field"""
         if self.selected_index is not None:
-            new_val = self.obtained[self.selected_index] + 1
+            new_val = self.obtained[self.selected_index] + 0.1
             new_val = max(self.lower[self.selected_index], min(self.upper[self.selected_index], new_val))
             self.obtained[self.selected_index] = new_val
             self._update_entry_field()
@@ -296,7 +296,7 @@ class GraphPanel(ctk.CTkFrame):
     def _on_entry_key_down(self, event):
         """Handle Down arrow key in entry field"""
         if self.selected_index is not None:
-            new_val = self.obtained[self.selected_index] - 1
+            new_val = self.obtained[self.selected_index] - 0.1
             new_val = max(self.lower[self.selected_index], min(self.upper[self.selected_index], new_val))
             self.obtained[self.selected_index] = new_val
             self._update_entry_field()
