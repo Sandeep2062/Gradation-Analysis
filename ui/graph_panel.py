@@ -24,9 +24,11 @@ class GraphPanel(ctk.CTkFrame):
         self.obtained = []
 
         self.drag_index = None
+        self.selected_index = None  # Track which point is selected
         self.updating_from_table = False  # Flag to prevent circular updates
 
         self._build_graph()
+        self._build_controls()
 
     # ----------------------------------------------------
     # BUILD GRAPH UI
@@ -52,6 +54,39 @@ class GraphPanel(ctk.CTkFrame):
         self.canvas.mpl_connect("button_press_event", self._on_click)
         self.canvas.mpl_connect("motion_notify_event", self._on_drag)
         self.canvas.mpl_connect("button_release_event", self._on_release)
+        
+        # Bind keyboard events to the canvas
+        self.canvas.get_tk_widget().bind("<Up>", self._on_key_up)
+        self.canvas.get_tk_widget().bind("<Down>", self._on_key_down)
+        self.canvas.get_tk_widget().focus_set()
+
+    def _build_controls(self):
+        """Build control panel for precise point adjustment"""
+        control_frame = ctk.CTkFrame(self, fg_color="#252d3d", corner_radius=8)
+        control_frame.pack(fill="x", padx=10, pady=(0, 10))
+        
+        label = ctk.CTkLabel(control_frame, text="Selected Point Value:", font=("Segoe UI", 11))
+        label.pack(side="left", padx=(10, 5), pady=8)
+        
+        self.point_value_entry = ctk.CTkEntry(
+            control_frame, 
+            width=80, 
+            placeholder_text="Click point",
+            font=("Segoe UI", 11),
+            fg_color="#1a1f2e",
+            border_color="#0891b2",
+            border_width=1
+        )
+        self.point_value_entry.pack(side="left", padx=5, pady=8)
+        self.point_value_entry.bind("<Return>", self._on_entry_confirm)
+        
+        info_label = ctk.CTkLabel(
+            control_frame, 
+            text="(Use ↑↓ keys or edit & press Enter)", 
+            font=("Segoe UI", 10, "italic"),
+            text_color="#94a3b8"
+        )
+        info_label.pack(side="left", padx=10, pady=8)
 
     # ----------------------------------------------------
     # LOAD MATERIAL LIMITS + SETUP
@@ -154,6 +189,8 @@ class GraphPanel(ctk.CTkFrame):
         # confirm click within draggable radius
         if abs(self.obtained[index] - event.ydata) < 6:
             self.drag_index = index
+            self.selected_index = index  # Track selection for keyboard control
+            self._update_entry_field()  # Update the input field to show this point's value
 
     def _on_drag(self, event):
         if self.drag_index is None:
@@ -166,6 +203,7 @@ class GraphPanel(ctk.CTkFrame):
         y = max(self.lower[self.drag_index], min(self.upper[self.drag_index], y))
 
         self.obtained[self.drag_index] = y
+        self._update_entry_field()  # Update field during drag
 
         # Update retained + table
         self._sync_back()
@@ -175,6 +213,55 @@ class GraphPanel(ctk.CTkFrame):
 
     def _on_release(self, event):
         self.drag_index = None
+
+    def _on_key_up(self, event):
+        """Handle Up arrow key to increase selected point's passing %"""
+        if self.selected_index is not None:
+            # Increase passing % by 1
+            new_val = self.obtained[self.selected_index] + 1
+            new_val = max(self.lower[self.selected_index], min(self.upper[self.selected_index], new_val))
+            self.obtained[self.selected_index] = new_val
+            self._update_entry_field()
+            self._sync_back()
+            self._redraw_graph()
+
+    def _on_key_down(self, event):
+        """Handle Down arrow key to decrease selected point's passing %"""
+        if self.selected_index is not None:
+            # Decrease passing % by 1
+            new_val = self.obtained[self.selected_index] - 1
+            new_val = max(self.lower[self.selected_index], min(self.upper[self.selected_index], new_val))
+            self.obtained[self.selected_index] = new_val
+            self._update_entry_field()
+            self._sync_back()
+            self._redraw_graph()
+
+    def _update_entry_field(self):
+        """Update the input field to show the selected point's value"""
+        if self.selected_index is not None:
+            sieve_label = self.sieve_labels[self.selected_index]
+            value = self.obtained[self.selected_index]
+            self.point_value_entry.delete(0, "end")
+            self.point_value_entry.insert(0, f"{value:.1f}% ({sieve_label}mm)")
+
+    def _on_entry_confirm(self, event):
+        """Handle Enter key in the input field to set point value directly"""
+        if self.selected_index is None:
+            return
+        
+        try:
+            # Parse the input (handle "XX.X% (mm)" format or just "XX.X")
+            text = self.point_value_entry.get()
+            value = float(text.split("%")[0].strip())
+        except:
+            return
+        
+        # Clamp to limits
+        value = max(self.lower[self.selected_index], min(self.upper[self.selected_index], value))
+        self.obtained[self.selected_index] = value
+        self._update_entry_field()
+        self._sync_back()
+        self._redraw_graph()
 
     # ----------------------------------------------------
     # SYNC TO TABLE + FM
