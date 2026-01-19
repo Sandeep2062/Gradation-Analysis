@@ -97,13 +97,13 @@ class InputPanel(ctk.CTkFrame):
         lower, upper = parent.table_panel.get_limits()
         sieve_sizes = parent.table_panel.get_sieve_sizes()
 
-        # Generate random curve in table order (largest to smallest for right-to-left display)
+        # Generate random curve in table order (largest to smallest)
         random_curve = self.random_gen.generate(sieve_sizes, lower, upper)
 
         # Update table with new passing curve
         parent.table_panel.update_passing(random_curve)
         
-        # Update graph
+        # Update graph (it will reverse internally for display)
         parent.graph_panel.update_curve(random_curve)
         
         # Recalculate retained and update FM
