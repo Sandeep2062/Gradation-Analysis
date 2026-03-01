@@ -7,7 +7,7 @@ import numpy as np
 class InputPanel(ctk.CTkFrame):
 
     def __init__(self, parent, total_weight_manager):
-        super().__init__(parent, fg_color="#1a1f2e", corner_radius=15)
+        super().__init__(parent, fg_color="#1a1f2e", corner_radius=15, width=220)
 
         self.material_key = "fine"
         self.data = materials[self.material_key]
@@ -27,11 +27,19 @@ class InputPanel(ctk.CTkFrame):
         )
         title.pack(pady=(15, 10))
 
+        # Separator
+        sep = ctk.CTkFrame(self, fg_color="#334155", height=1)
+        sep.pack(fill="x", padx=15, pady=(0, 10))
+
         # TOTAL WEIGHT INPUT
         self.total_label = ctk.CTkLabel(self, text="Total Weight (gm):", font=("Segoe UI", 13), text_color="#cbd5e1")
-        self.total_label.pack(pady=(15, 3))
+        self.total_label.pack(pady=(10, 3))
 
-        self.total_entry = ctk.CTkEntry(self, width=140, corner_radius=8, fg_color="#252d3d", border_color="#0891b2", border_width=2, text_color="white")
+        self.total_entry = ctk.CTkEntry(
+            self, width=160, height=38, corner_radius=8,
+            fg_color="#252d3d", border_color="#0891b2", border_width=2,
+            text_color="white", font=("Segoe UI", 13), justify="center"
+        )
         self.total_entry.insert(0, "5000")
         self.total_entry.pack(pady=8)
 
@@ -40,27 +48,45 @@ class InputPanel(ctk.CTkFrame):
         # Set initial total weight
         self._on_change_total_weight()
 
+        # Separator
+        sep2 = ctk.CTkFrame(self, fg_color="#334155", height=1)
+        sep2.pack(fill="x", padx=15, pady=(15, 10))
+
         # RANDOM BUTTON
         self.random_btn = ctk.CTkButton(
             self,
-            text="🎲 Generate Random Curve",
+            text="🎲  Generate Random Curve",
             fg_color="#0891b2",
             hover_color="#06b6d4",
             corner_radius=10,
+            height=42,
             text_color="white",
-            font=("Segoe UI", 12, "bold"),
+            font=("Segoe UI", 13, "bold"),
             command=self._generate_random
         )
-        self.random_btn.pack(pady=(25, 15))
+        self.random_btn.pack(pady=(15, 15), padx=15, fill="x")
+
+        # Separator
+        sep3 = ctk.CTkFrame(self, fg_color="#334155", height=1)
+        sep3.pack(fill="x", padx=15, pady=(5, 10))
 
         # FM OUTPUT
         self.fm_label = ctk.CTkLabel(
             self,
-            text="Fineness Modulus: -",
-            font=("Segoe UI", 14),
-            text_color="#cbd5e1"
+            text="Fineness Modulus: —",
+            font=("Segoe UI", 15, "bold"),
+            text_color="#0891b2"
         )
-        self.fm_label.pack(pady=(10, 20))
+        self.fm_label.pack(pady=(10, 3))
+
+        # FM Zone label (for fine aggregate)
+        self.fm_zone_label = ctk.CTkLabel(
+            self,
+            text="",
+            font=("Segoe UI", 12),
+            text_color="#94a3b8"
+        )
+        self.fm_zone_label.pack(pady=(0, 20))
 
     # -------------------- CORE LOGIC -------------------- #
 
@@ -71,6 +97,27 @@ class InputPanel(ctk.CTkFrame):
     def update_fm(self, retained_list):
         fm_value = self.fm_calc.calculate_fm(retained_list)
         self.fm_label.configure(text=f"Fineness Modulus: {fm_value:.3f}")
+
+        # Show zone classification for fine aggregate
+        if self.material_key == "fine":
+            if fm_value < 2.2:
+                zone = "Zone IV (Very Fine)"
+                color = "#f59e0b"
+            elif fm_value < 2.6:
+                zone = "Zone III (Fine)"
+                color = "#22c55e"
+            elif fm_value < 2.9:
+                zone = "Zone II (Medium) ✓"
+                color = "#22c55e"
+            elif fm_value < 3.2:
+                zone = "Zone I (Coarse)"
+                color = "#f59e0b"
+            else:
+                zone = "Out of Range"
+                color = "#ef4444"
+            self.fm_zone_label.configure(text=zone, text_color=color)
+        else:
+            self.fm_zone_label.configure(text="")
 
     def _on_change_total_weight(self):
         try:

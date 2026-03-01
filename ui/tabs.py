@@ -3,7 +3,7 @@ import customtkinter as ctk
 class TopTabs(ctk.CTkFrame):
 
     def __init__(self, parent, callback):
-        super().__init__(parent, fg_color="#1a1f2e")
+        super().__init__(parent, fg_color="#0f172a")
 
         self.callback = callback
         self.materials = {
@@ -26,26 +26,28 @@ class TopTabs(ctk.CTkFrame):
 
         tabs_data = [
             ("fine", "⚙️ Fine Aggregate"),
-            ("coarse1", "🏔️ Coarse Aggregate 1"),
-            ("coarse2", "🏔️ Coarse Aggregate 2"),
+            ("coarse1", "🏔️ Coarse Agg. 1"),
+            ("coarse2", "🏔️ Coarse Agg. 2"),
             ("subbase", "🏗️ Sub-Base"),
             ("crm", "🔨 CRM for Base")
         ]
 
         for idx, (key, label) in enumerate(tabs_data):
+            is_active = key == "fine"
             btn = ctk.CTkButton(
                 self,
                 text=label,
-                corner_radius=12,
-                fg_color="#2d3748" if key != "fine" else "#0891b2",
-                border_width=0 if key == "fine" else 2,
-                border_color="#0891b2" if key != "fine" else None,
-                text_color="white",
-                font=("Segoe UI", 13, "bold"),
-                hover_color="#0ea5e9" if key == "fine" else "#3d4857",
+                corner_radius=10,
+                height=40,
+                fg_color="#0891b2" if is_active else "#1e293b",
+                border_width=0 if is_active else 1,
+                border_color="#334155" if not is_active else None,
+                text_color="white" if is_active else "#94a3b8",
+                font=("Segoe UI", 12, "bold"),
+                hover_color="#0ea5e9" if is_active else "#334155",
                 command=lambda k=key: self._switch(k)
             )
-            btn.grid(row=0, column=idx, padx=6, pady=10, sticky="ew")
+            btn.grid(row=0, column=idx, padx=4, pady=10, sticky="ew")
             self.buttons[key] = btn
 
     def _switch(self, key):
@@ -53,11 +55,17 @@ class TopTabs(ctk.CTkFrame):
             return
         self.current = key
 
-        # Update all buttons
+        # Update all buttons with active/inactive states
         for mat_key, btn in self.buttons.items():
             if mat_key == key:
-                btn.configure(fg_color="#0891b2", border_width=0)
+                btn.configure(
+                    fg_color="#0891b2", border_width=0,
+                    text_color="white", hover_color="#0ea5e9"
+                )
             else:
-                btn.configure(fg_color="#2d3748", border_width=2)
+                btn.configure(
+                    fg_color="#1e293b", border_width=1,
+                    text_color="#94a3b8", hover_color="#334155"
+                )
 
         self.callback(key)

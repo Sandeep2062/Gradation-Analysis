@@ -9,7 +9,7 @@ from core.gradation_engine import GradationEngine
 class GraphPanel(ctk.CTkFrame):
 
     def __init__(self, parent):
-        super().__init__(parent, fg_color="#1a1f2e", corner_radius=15)
+        super().__init__(parent, fg_color="#0f172a", corner_radius=15)
 
         self.material_key = "fine"
         self.data = materials[self.material_key]
@@ -36,17 +36,17 @@ class GraphPanel(ctk.CTkFrame):
 
     def _build_graph(self):
         self.figure, self.ax = plt.subplots(figsize=(7,5), dpi=100)
-        self.figure.patch.set_facecolor('#1a1f2e')
-        self.ax.set_facecolor('#1a1f2e')
+        self.figure.patch.set_facecolor('#0f172a')
+        self.ax.set_facecolor('#0f172a')
 
-        self.ax.tick_params(colors="#b0bac9")
-        self.ax.spines["bottom"].set_color("#3d4857")
-        self.ax.spines["left"].set_color("#3d4857")
-        self.ax.spines["top"].set_color("#1a1f2e")
-        self.ax.spines["right"].set_color("#1a1f2e")
+        self.ax.tick_params(colors="#94a3b8", labelsize=9, length=4, width=0.5)
+        self.ax.spines["bottom"].set_color("#334155")
+        self.ax.spines["left"].set_color("#334155")
+        self.ax.spines["top"].set_visible(False)
+        self.ax.spines["right"].set_visible(False)
 
-        self.ax.set_xlabel("Sieve Size", color="#b0bac9")
-        self.ax.set_ylabel("% Passing", color="#b0bac9")
+        self.ax.set_xlabel("Sieve Size (mm)", color="#94a3b8", fontsize=11)
+        self.ax.set_ylabel("% Passing", color="#94a3b8", fontsize=11)
 
         self.canvas = FigureCanvasTkAgg(self.figure, master=self)
         self.canvas.get_tk_widget().pack(fill="both", expand=True, padx=10, pady=10)
@@ -120,61 +120,78 @@ class GraphPanel(ctk.CTkFrame):
     def _redraw_graph(self):
         """Redraws the entire graph with current data"""
         self.ax.clear()
-        self.ax.set_facecolor('#1a1f2e')
-        self.ax.tick_params(colors="#b0bac9", labelsize=10)
-        self.ax.spines["bottom"].set_color("#3d4857")
-        self.ax.spines["left"].set_color("#3d4857")
+        self.ax.set_facecolor('#0f172a')
+        self.ax.tick_params(colors="#94a3b8", labelsize=9, length=4, width=0.5)
+        self.ax.spines["bottom"].set_color("#334155")
+        self.ax.spines["left"].set_color("#334155")
         self.ax.spines["top"].set_visible(False)
         self.ax.spines["right"].set_visible(False)
-        
-        # Add grid for better readability
-        self.ax.grid(True, alpha=0.2, color="#3d4857", linestyle="--", linewidth=0.5)
 
-        # lower/upper limit curves
-        self.ax.plot(self.sieve_sizes, self.lower, color="#94a3b8", linewidth=2, linestyle="--", alpha=0.8, label="Lower Limit")
-        self.ax.plot(self.sieve_sizes, self.upper, color="#94a3b8", linewidth=2, linestyle="--", alpha=0.8, label="Upper Limit")
+        # Subtle grid
+        self.ax.grid(True, alpha=0.12, color="#475569", linestyle="-", linewidth=0.5)
+        self.ax.set_axisbelow(True)
 
-        # Shade the grading zone
-        self.ax.fill_between(self.sieve_sizes, self.lower, self.upper, alpha=0.1, color="#0891b2")
+        n = len(self.sieve_sizes)
 
-        # obtained curve (cyan)
-        self.ax.plot(self.sieve_sizes, self.obtained, color="#06b6d4", linewidth=3, label="Obtained", zorder=3)
+        # Create smooth interpolation for curves
+        if n > 2:
+            x_smooth = np.linspace(0, n - 1, n * 10)
+            lower_smooth = np.interp(x_smooth, self.sieve_sizes, self.lower)
+            upper_smooth = np.interp(x_smooth, self.sieve_sizes, self.upper)
+            obtained_smooth = np.interp(x_smooth, self.sieve_sizes, self.obtained)
+        else:
+            x_smooth = self.sieve_sizes
+            lower_smooth = self.lower
+            upper_smooth = self.upper
+            obtained_smooth = self.obtained
 
-        # draggable points - larger for better visibility
-        self.ax.scatter(self.sieve_sizes, self.obtained, color="#06b6d4", s=100, edgecolor="white", zorder=5, linewidth=2)
+        # Shaded grading envelope
+        self.ax.fill_between(x_smooth, lower_smooth, upper_smooth, alpha=0.07, color="#0ea5e9", linewidth=0)
 
-        # Set x-axis with sieve size labels - BIGGER
+        # Limit curves
+        self.ax.plot(x_smooth, lower_smooth, color="#64748b", linewidth=1.5, linestyle="--", alpha=0.6, label="Lower Limit")
+        self.ax.plot(x_smooth, upper_smooth, color="#64748b", linewidth=1.5, linestyle="--", alpha=0.6, label="Upper Limit")
+
+        # Obtained curve with glow effect
+        self.ax.plot(x_smooth, obtained_smooth, color="#0ea5e9", linewidth=5, alpha=0.12, zorder=2)
+        self.ax.plot(x_smooth, obtained_smooth, color="#06b6d4", linewidth=2.5, label="Obtained", zorder=3)
+
+        # Draggable points with selected-point highlight
+        for i in range(n):
+            if i == self.selected_index:
+                self.ax.scatter(self.sieve_sizes[i], self.obtained[i],
+                    color="#f59e0b", s=130, edgecolor="#fbbf24", zorder=6, linewidth=2.5)
+            else:
+                self.ax.scatter(self.sieve_sizes[i], self.obtained[i],
+                    color="#22d3ee", s=80, edgecolor="white", zorder=5, linewidth=1.5)
+
+        # Smart sieve labels
+        def fmt_sieve(x):
+            if isinstance(x, str):
+                return x
+            if x >= 10:
+                return f"{x:.0f}"
+            if x >= 1:
+                return f"{x:.1f}"
+            return f"{x:.2f}"
+
         self.ax.set_xticks(self.sieve_sizes)
-        self.ax.set_xticklabels([str(x) if isinstance(x, str) else f"{x:.2f}" for x in self.sieve_labels], rotation=45, ha='right', fontsize=11, fontweight='bold')
-        self.ax.set_xlabel("Sieve Size (mm)", color="#b0bac9", fontsize=12, fontweight='bold')
-        self.ax.set_ylabel("% Passing", color="#b0bac9", fontsize=12, fontweight='bold')
-        self.ax.legend(facecolor="#252d3d", edgecolor="#3d4857", labelcolor="#b0bac9", loc='best', framealpha=0.95)
+        self.ax.set_xticklabels([fmt_sieve(x) for x in self.sieve_labels], rotation=45, ha='right', fontsize=9)
+        self.ax.set_xlabel("Sieve Size (mm)", color="#94a3b8", fontsize=11, labelpad=8)
+        self.ax.set_ylabel("% Passing", color="#94a3b8", fontsize=11, labelpad=8)
+
+        self.ax.legend(
+            facecolor="#1e293b", edgecolor="#334155", labelcolor="#94a3b8",
+            loc='upper left', framealpha=0.95, fontsize=9
+        )
         self.ax.set_ylim(-5, 110)
-        self.figure.tight_layout()
+        self.figure.tight_layout(pad=1.2)
 
         self.canvas.draw()
 
     def _fast_update_curve(self):
-        """Fast update of curve during dragging - only update line and scatter without full redraw"""
-        # Find and update the obtained curve line (last plotted line, or search by color)
-        lines = self.ax.get_lines()
-        scatter_artists = self.ax.collections
-        
-        # Update the obtained curve line (usually the cyan/last data line)
-        for line in lines:
-            if line.get_color() == '#06b6d4':  # cyan color for obtained curve
-                line.set_data(self.sieve_sizes, self.obtained)
-                break
-        
-        # Update scatter points
-        for scatter in scatter_artists:
-            if hasattr(scatter, 'get_facecolor') and len(scatter.get_facecolor()) > 0:
-                if scatter.get_facecolor()[0][2] > 0.8:  # Check if it's the cyan scatter
-                    scatter.set_offsets(np.c_[self.sieve_sizes, self.obtained])
-                    break
-        
-        # Quick redraw without layout recalculation
-        self.canvas.draw_idle()
+        """Fast update during dragging — full redraw for consistent visuals with selection highlight"""
+        self._redraw_graph()
 
     # ----------------------------------------------------
     # DRAGGING LOGIC

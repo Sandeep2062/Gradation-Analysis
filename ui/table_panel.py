@@ -22,6 +22,8 @@ class TablePanel(ctk.CTkFrame):
         self.passing = []
         self.retained = []
 
+        self._active_entry = None  # Track active edit entry
+
         self._build_ui()
         self._init_table_data()
 
@@ -30,54 +32,92 @@ class TablePanel(ctk.CTkFrame):
     # ----------------------------------------------------
 
     def _build_ui(self):
+        # Header with title + hint
+        header = ctk.CTkFrame(self, fg_color="transparent")
+        header.pack(fill="x", padx=12, pady=(10, 5))
 
-        title = ctk.CTkLabel(self, text="📊 Gradation Table", font=("Segoe UI", 16, "bold"))
-        title.pack(pady=(10, 5))
+        title = ctk.CTkLabel(header, text="📊 Gradation Table", font=("Segoe UI", 16, "bold"))
+        title.pack(side="left")
 
+        self.edit_hint = ctk.CTkLabel(
+            header,
+            text="Double-click to edit  % Passing  or  Weight Retained",
+            font=("Segoe UI", 10, "italic"),
+            text_color="#64748b"
+        )
+        self.edit_hint.pack(side="right")
+
+        # Treeview styling
         style = ttk.Style()
         style.theme_use('clam')
         style.configure(
-            "Treeview",
+            "Gradation.Treeview",
             background="#252d3d",
             foreground="white",
-            rowheight=35,
+            rowheight=34,
             fieldbackground="#252d3d",
-            bordercolor="#3d4857",
-            borderwidth=2,
+            bordercolor="#1e293b",
+            borderwidth=0,
             font=("Segoe UI", 11)
         )
         style.configure(
-            "Treeview.Heading",
-            background="#1a1f2e",
-            foreground="white",
-            borderwidth=2,
+            "Gradation.Treeview.Heading",
+            background="#1e293b",
+            foreground="#e2e8f0",
+            borderwidth=0,
+            relief="flat",
             font=("Segoe UI", 11, "bold")
         )
-        style.map("Treeview", background=[("selected", "#0891b2")])
-        style.map("Treeview.Heading", background=[("active", "#2d3748")])
+        style.map("Gradation.Treeview", background=[("selected", "#0e7490")])
+        style.map("Gradation.Treeview.Heading", background=[("active", "#334155")])
+
+        # Table container
+        self.table_frame = ctk.CTkFrame(self, fg_color="#1e293b", corner_radius=8)
+        self.table_frame.pack(fill="both", expand=True, padx=10, pady=(0, 5))
 
         self.table = ttk.Treeview(
-            self,
+            self.table_frame,
             columns=("sieve", "lower", "upper", "passing", "retained"),
             show="headings",
-            height=8
+            height=8,
+            style="Gradation.Treeview"
         )
 
         self.table.heading("sieve", text="Sieve Size (mm)")
         self.table.heading("lower", text="Lower Limit (%)")
         self.table.heading("upper", text="Upper Limit (%)")
-        self.table.heading("passing", text="% Passing")
-        self.table.heading("retained", text="Weight Retained (g)")
+        self.table.heading("passing", text="% Passing  ✏️")
+        self.table.heading("retained", text="Wt. Retained (g)  ✏️")
 
-        self.table.column("sieve", width=140, anchor="center")
-        self.table.column("lower", width=140, anchor="center")
-        self.table.column("upper", width=140, anchor="center")
-        self.table.column("passing", width=140, anchor="center")
-        self.table.column("retained", width=160, anchor="center")
+        self.table.column("sieve", width=130, anchor="center", minwidth=90)
+        self.table.column("lower", width=130, anchor="center", minwidth=90)
+        self.table.column("upper", width=130, anchor="center", minwidth=90)
+        self.table.column("passing", width=130, anchor="center", minwidth=90)
+        self.table.column("retained", width=170, anchor="center", minwidth=110)
 
-        self.table.pack(fill="both", expand=True, padx=10, pady=10)
+        # Alternating row colors
+        self.table.tag_configure("evenrow", background="#252d3d")
+        self.table.tag_configure("oddrow", background="#2a3347")
+        self.table.tag_configure("panrow", background="#1e3a5f")
 
+        self.table.pack(fill="both", expand=True)
         self.table.bind("<Double-1>", self._begin_edit)
+
+        # Summary bar showing total retained weight
+        summary = ctk.CTkFrame(self, fg_color="#252d3d", corner_radius=8, height=38)
+        summary.pack(fill="x", padx=10, pady=(0, 10))
+
+        self.total_retained_label = ctk.CTkLabel(
+            summary, text="∑ Total Retained: 0 g",
+            font=("Segoe UI", 12, "bold"), text_color="#0891b2"
+        )
+        self.total_retained_label.pack(side="left", padx=15, pady=8)
+
+        self.status_label = ctk.CTkLabel(
+            summary, text="",
+            font=("Segoe UI", 11), text_color="#94a3b8"
+        )
+        self.status_label.pack(side="right", padx=15, pady=8)
 
     # ----------------------------------------------------
     # TABLE DATA INIT
@@ -112,21 +152,54 @@ class TablePanel(ctk.CTkFrame):
     def _refresh_table(self):
         self.table.delete(*self.table.get_children())
 
+        total_retained = 0.0
         for i in range(len(self.sieve_sizes)):
+            retained_val = self.retained[i]
+            total_retained += retained_val
+
+            # Alternating row colors
+            if self.sieve_sizes[i] == "Pan":
+                tag = "panrow"
+            elif i % 2 == 0:
+                tag = "evenrow"
+            else:
+                tag = "oddrow"
+
             row = (
                 self.sieve_sizes[i],
                 f"{self.lower_limits[i]:.0f}",
                 f"{self.upper_limits[i]:.0f}",
                 f"{self.passing[i]:.1f}",
-                f"{int(round(self.retained[i]))}"
+                f"{int(round(retained_val))}"
             )
-            self.table.insert("", "end", values=row)
+            self.table.insert("", "end", values=row, tags=(tag,))
+
+        # Update summary bar
+        target = self.total_weight_manager.get_total_weight()
+        diff = abs(total_retained - target)
+        self.total_retained_label.configure(text=f"∑ Total Retained: {total_retained:.0f} g")
+
+        if diff < 1:
+            self.status_label.configure(text="✓ Balanced", text_color="#22c55e")
+        else:
+            self.status_label.configure(
+                text=f"⚠ Off by {diff:.0f}g (target: {target:.0f}g)",
+                text_color="#f59e0b"
+            )
 
     # ----------------------------------------------------
     # EDITING
     # ----------------------------------------------------
 
     def _begin_edit(self, event):
+        # Destroy any existing edit entry
+        if self._active_entry:
+            try:
+                self._active_entry.destroy()
+            except:
+                pass
+            self._active_entry = None
+
         region = self.table.identify("region", event.x, event.y)
         if region != "cell":
             return
@@ -135,27 +208,52 @@ class TablePanel(ctk.CTkFrame):
         col = self.table.identify_column(event.x)
         col_index = int(col.replace("#", "")) - 1
 
-        if col_index == 0 or col_index == 1 or col_index == 2:
-            return  # sieve, lower, upper are read-only
+        # Only passing (3) and retained (4) are editable
+        if col_index not in (3, 4):
+            return
 
         bbox = self.table.bbox(row_id, col)
         if not bbox:
             return
 
-        entry = ctk.CTkEntry(self, width=bbox[2], height=bbox[3])
-        entry.place(x=bbox[0] + 10, y=bbox[1] + 65)
+        # Calculate proper position using absolute coordinates
+        abs_x = self.table.winfo_rootx() + bbox[0]
+        abs_y = self.table.winfo_rooty() + bbox[1]
+        self_x = abs_x - self.winfo_rootx()
+        self_y = abs_y - self.winfo_rooty()
+
+        entry = ctk.CTkEntry(
+            self,
+            width=bbox[2],
+            height=bbox[3],
+            fg_color="#0f172a",
+            border_color="#0891b2",
+            border_width=2,
+            text_color="#22d3ee",
+            font=("Segoe UI", 12, "bold"),
+            justify="center",
+            corner_radius=0
+        )
+        entry.place(x=self_x, y=self_y)
+        self._active_entry = entry
 
         old_value = self.table.item(row_id)["values"][col_index]
-        entry.insert(0, old_value)
-
+        entry.insert(0, str(old_value))
+        entry.select_range(0, "end")
         entry.focus()
+
+        def on_escape(e):
+            entry.destroy()
+            self._active_entry = None
 
         entry.bind("<Return>", lambda e: self._finish_edit(entry, row_id, col_index))
         entry.bind("<FocusOut>", lambda e: self._finish_edit(entry, row_id, col_index))
+        entry.bind("<Escape>", on_escape)
 
     def _finish_edit(self, entry, row_id, col_index):
         new_val = entry.get().strip()
         entry.destroy()
+        self._active_entry = None
 
         try:
             new_val = float(new_val)
@@ -164,33 +262,41 @@ class TablePanel(ctk.CTkFrame):
 
         row_index = self.table.index(row_id)
 
-        # update data arrays
         if col_index == 3:  # Passing % edited
             # Clamp passing % to limits
             new_val = max(self.lower_limits[row_index], min(self.upper_limits[row_index], new_val))
             self.passing[row_index] = new_val
             # Recalculate retained from passing
             self.retained = self.grad_engine.passing_to_retained(self.passing)
-        elif col_index == 4:  # Weight retained edited
-            # Clamp retained to non-negative
+
+        elif col_index == 4:  # Weight retained edited — AUTO-ADJUST others
             new_val = max(0, new_val)
-            
-            # Update retained at this sieve
+            total_weight = self.total_weight_manager.get_total_weight()
+            new_val = min(new_val, total_weight)  # Cannot exceed total
+
+            # Proportional adjustment: other retained values scale to keep total = total_weight
+            other_indices = [j for j in range(len(self.retained)) if j != row_index]
+            other_total = sum(self.retained[j] for j in other_indices)
+
             self.retained[row_index] = new_val
-            
-            # Recalculate passing from retained
+            remaining = total_weight - new_val
+
+            if other_total > 0 and remaining >= 0:
+                scale = remaining / other_total
+                for j in other_indices:
+                    self.retained[j] = max(0, self.retained[j] * scale)
+            elif len(other_indices) > 0 and remaining > 0:
+                # All others are zero — distribute equally
+                per_sieve = remaining / len(other_indices)
+                for j in other_indices:
+                    self.retained[j] = per_sieve
+
+            # Recalculate passing from the adjusted retained
             self.passing = self._retained_to_passing(self.retained)
-            
-            # Clamp all passing values to their limits
-            for i in range(len(self.passing)):
-                self.passing[i] = max(self.lower_limits[i], min(self.upper_limits[i], self.passing[i]))
-            
-            # Recalculate retained to match the clamped passing
-            self.retained = self.grad_engine.passing_to_retained(self.passing)
 
         self._refresh_table()
 
-        # sync graph + FM
+        # Sync graph + FM
         parent = self.master
         parent.graph_panel.update_curve(self.passing)
         parent.input_panel.update_fm(self.retained)

@@ -24,7 +24,7 @@ class GradationApp(ctk.CTk):
         self.title("Gradation Analysis")
         self.geometry("1400x850")
         self.minsize(1200, 750)
-        self.configure(fg_color="#0f1419")
+        self.configure(fg_color="#0f172a")
         
         # Set icon - handle both development and bundled environments
         self._set_icon()
@@ -32,8 +32,8 @@ class GradationApp(ctk.CTk):
         # GRID LAYOUT
         self.grid_columnconfigure(0, weight=0)
         self.grid_columnconfigure(1, weight=1)
-        self.grid_rowconfigure(1, weight=1)
-        self.grid_rowconfigure(2, weight=0)
+        self.grid_rowconfigure(1, weight=3)
+        self.grid_rowconfigure(2, weight=1)
         self.grid_rowconfigure(3, weight=0)
 
         # TOP TABS
