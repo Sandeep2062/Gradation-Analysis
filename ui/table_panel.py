@@ -21,6 +21,7 @@ class TablePanel(ctk.CTkFrame):
         self.upper_limits = []
         self.passing = []
         self.retained = []
+        self.locked_rows = set()  # Track which row indices are locked
 
         self._active_entry = None  # Track active edit entry
 
@@ -77,7 +78,7 @@ class TablePanel(ctk.CTkFrame):
 
         self.table = ttk.Treeview(
             self.table_frame,
-            columns=("sieve", "lower", "upper", "passing", "retained"),
+            columns=("sieve", "lower", "upper", "passing", "retained", "lock"),
             show="headings",
             height=8,
             style="Gradation.Treeview"
@@ -88,20 +89,26 @@ class TablePanel(ctk.CTkFrame):
         self.table.heading("upper", text="Upper Limit (%)")
         self.table.heading("passing", text="% Passing  ✏️")
         self.table.heading("retained", text="Wt. Retained (g)  ✏️")
+        self.table.heading("lock", text="Lock")
 
-        self.table.column("sieve", width=130, anchor="center", minwidth=90)
-        self.table.column("lower", width=130, anchor="center", minwidth=90)
-        self.table.column("upper", width=130, anchor="center", minwidth=90)
-        self.table.column("passing", width=130, anchor="center", minwidth=90)
-        self.table.column("retained", width=170, anchor="center", minwidth=110)
+        self.table.column("sieve", width=120, anchor="center", minwidth=90)
+        self.table.column("lower", width=120, anchor="center", minwidth=90)
+        self.table.column("upper", width=120, anchor="center", minwidth=90)
+        self.table.column("passing", width=120, anchor="center", minwidth=90)
+        self.table.column("retained", width=160, anchor="center", minwidth=110)
+        self.table.column("lock", width=60, anchor="center", minwidth=50)
 
         # Alternating row colors
         self.table.tag_configure("evenrow", background="#252d3d")
         self.table.tag_configure("oddrow", background="#2a3347")
         self.table.tag_configure("panrow", background="#1e3a5f")
+        self.table.tag_configure("locked_evenrow", background="#2d2520")
+        self.table.tag_configure("locked_oddrow", background="#332a22")
+        self.table.tag_configure("locked_panrow", background="#2a3020")
 
         self.table.pack(fill="both", expand=True)
         self.table.bind("<Double-1>", self._begin_edit)
+        self.table.bind("<ButtonRelease-1>", self._on_click)
 
         # Summary bar showing total retained weight
         summary = ctk.CTkFrame(self, fg_color="#252d3d", corner_radius=8, height=38)
@@ -128,7 +135,7 @@ class TablePanel(ctk.CTkFrame):
 
         # Default empty startup
         for _ in range(7):
-            self.table.insert("", "end", values=("", "", "", "", ""))
+            self.table.insert("", "end", values=("", "", "", "", "", ""))
 
     def load_material(self, material_key):
         self.material_key = material_key
@@ -138,6 +145,7 @@ class TablePanel(ctk.CTkFrame):
         self.sieve_sizes = self.data["sieve_sizes"]
         self.lower_limits = self.data["lower_limits"]
         self.upper_limits = self.data["upper_limits"]
+        self.locked_rows = set()  # Reset locks on material change
         
         # Initialize passing and retained with middle values between limits
         row_count = len(self.sieve_sizes)
@@ -165,12 +173,24 @@ class TablePanel(ctk.CTkFrame):
             else:
                 tag = "oddrow"
 
+            lock_icon = "🔒" if i in self.locked_rows else "🔓"
+
+            # Use locked tag variants for locked rows
+            if i in self.locked_rows:
+                if self.sieve_sizes[i] == "Pan":
+                    tag = "locked_panrow"
+                elif i % 2 == 0:
+                    tag = "locked_evenrow"
+                else:
+                    tag = "locked_oddrow"
+
             row = (
                 self.sieve_sizes[i],
                 f"{self.lower_limits[i]:.0f}",
                 f"{self.upper_limits[i]:.0f}",
                 f"{self.passing[i]:.1f}",
-                f"{int(round(retained_val))}"
+                f"{int(round(retained_val))}",
+                lock_icon
             )
             self.table.insert("", "end", values=row, tags=(tag,))
 
@@ -210,6 +230,11 @@ class TablePanel(ctk.CTkFrame):
 
         # Only passing (3) and retained (4) are editable
         if col_index not in (3, 4):
+            return
+
+        # Don't allow editing locked rows
+        row_index = self.table.index(row_id)
+        if row_index in self.locked_rows:
             return
 
         bbox = self.table.bbox(row_id, col)
@@ -267,28 +292,49 @@ class TablePanel(ctk.CTkFrame):
             new_val = max(self.lower_limits[row_index], min(self.upper_limits[row_index], new_val))
             self.passing[row_index] = new_val
             # Recalculate retained from passing
-            self.retained = self.grad_engine.passing_to_retained(self.passing)
+            new_retained = self.grad_engine.passing_to_retained(self.passing)
+
+            # Preserve locked rows' retained values and redistribute difference
+            locked_indices = self.locked_rows - {row_index}
+            if locked_indices:
+                locked_total = sum(self.retained[j] for j in locked_indices)
+                # Keep locked retained values
+                for j in locked_indices:
+                    new_retained[j] = self.retained[j]
+                # Redistribute among unlocked rows
+                unlocked_indices = [j for j in range(len(new_retained)) if j not in locked_indices]
+                unlocked_total = sum(new_retained[j] for j in unlocked_indices)
+                target_unlocked = self.total_weight_manager.get_total_weight() - locked_total
+                if unlocked_total > 0 and target_unlocked >= 0:
+                    scale = target_unlocked / unlocked_total
+                    for j in unlocked_indices:
+                        new_retained[j] = max(0, new_retained[j] * scale)
+
+            self.retained = new_retained
 
         elif col_index == 4:  # Weight retained edited — AUTO-ADJUST others
             new_val = max(0, new_val)
             total_weight = self.total_weight_manager.get_total_weight()
             new_val = min(new_val, total_weight)  # Cannot exceed total
 
-            # Proportional adjustment: other retained values scale to keep total = total_weight
-            other_indices = [j for j in range(len(self.retained)) if j != row_index]
-            other_total = sum(self.retained[j] for j in other_indices)
+            # Only adjust unlocked rows (excluding both current row and locked rows)
+            adjustable_indices = [j for j in range(len(self.retained)) if j != row_index and j not in self.locked_rows]
+            locked_total = sum(self.retained[j] for j in self.locked_rows if j != row_index)
 
             self.retained[row_index] = new_val
-            remaining = total_weight - new_val
+            remaining = total_weight - new_val - locked_total
+            remaining = max(0, remaining)
 
-            if other_total > 0 and remaining >= 0:
-                scale = remaining / other_total
-                for j in other_indices:
+            adjustable_total = sum(self.retained[j] for j in adjustable_indices)
+
+            if adjustable_total > 0 and remaining >= 0:
+                scale = remaining / adjustable_total
+                for j in adjustable_indices:
                     self.retained[j] = max(0, self.retained[j] * scale)
-            elif len(other_indices) > 0 and remaining > 0:
-                # All others are zero — distribute equally
-                per_sieve = remaining / len(other_indices)
-                for j in other_indices:
+            elif len(adjustable_indices) > 0 and remaining > 0:
+                # All adjustable are zero — distribute equally
+                per_sieve = remaining / len(adjustable_indices)
+                for j in adjustable_indices:
                     self.retained[j] = per_sieve
 
             # Recalculate passing from the adjusted retained
@@ -348,4 +394,34 @@ class TablePanel(ctk.CTkFrame):
 
     def update_retained(self, new_retained):
         self.retained = new_retained
+        self._refresh_table()
+
+    # ----------------------------------------------------
+    # LOCK TOGGLE
+    # ----------------------------------------------------
+
+    def _on_click(self, event):
+        """Handle single click — toggle lock if Lock column is clicked."""
+        region = self.table.identify("region", event.x, event.y)
+        if region != "cell":
+            return
+
+        col = self.table.identify_column(event.x)
+        col_index = int(col.replace("#", "")) - 1
+
+        # Lock column is index 5
+        if col_index != 5:
+            return
+
+        row_id = self.table.identify_row(event.y)
+        if not row_id:
+            return
+
+        row_index = self.table.index(row_id)
+
+        if row_index in self.locked_rows:
+            self.locked_rows.discard(row_index)
+        else:
+            self.locked_rows.add(row_index)
+
         self._refresh_table()

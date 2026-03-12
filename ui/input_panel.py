@@ -113,8 +113,8 @@ class InputPanel(ctk.CTkFrame):
                 zone = "Zone I (Coarse)"
                 color = "#f59e0b"
             else:
-                zone = "Out of Range"
-                color = "#ef4444"
+                zone = "Zone I (Coarse)"
+                color = "#f59e0b"
             self.fm_zone_label.configure(text=zone, text_color=color)
         else:
             self.fm_zone_label.configure(text="")

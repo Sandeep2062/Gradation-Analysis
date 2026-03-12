@@ -10,7 +10,8 @@ import sys
 
 class GradationApp(ctk.CTk):
 
-    def __init__(self):
+    def __init__(
+        self):
         super().__init__()
 
         # Create shared total weight manager for all components
