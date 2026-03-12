@@ -4,7 +4,7 @@ A desktop application for **sieve gradation analysis** of construction aggregate
 
 ## Features
 
-- **Multiple Material Types** — Fine Aggregate, Coarse Aggregate (Type 1 & 2), Sub-Base, and CRM Base
+- **Multiple Material Types** — Fine Aggregate, Coarse Aggregate (Type 1 & 2), Sub-Base, CRM Base, Aggregate 40 mm, and Aggregate 20 mm
 - **Interactive Gradation Table** — Double-click to edit % Passing or Weight Retained values with automatic recalculation
 - **Row Locking** — Lock any row to fix its Weight Retained and % Passing values; other unlocked rows adjust proportionally to maintain total weight balance
 - **Draggable Graph** — Click and drag curve points on the gradation chart; use arrow keys for fine adjustments (±0.1%)
@@ -23,6 +23,8 @@ A desktop application for **sieve gradation analysis** of construction aggregate
 | Coarse Aggregate 2 | 40.00 mm – Pan (5 sieves) | IS 383 grading |
 | Sub-Base | 75.00 mm – Pan (9 sieves) | IRC SP:89 |
 | CRM Base | 45.00 mm – Pan (6 sieves) | CRM specification |
+| Aggregate 40 mm | 80.00 mm – Pan (6 sieves) | Custom limits |
+| Aggregate 20 mm | 40.00 mm – Pan (5 sieves) | Custom limits |
 
 ## How It Works
 

@@ -63,10 +63,38 @@ crm_base = {
     "upper_limits": [100.00, 100.00, 55.00, 30.00, 5.00, 0.00],
 }
 
+aggregate_40mm = {
+    "sieve_range": range(18, 24),
+    "sieve_column": "A",
+    "weight_column": "B",
+    "passing_column": "F",
+    "lower_column": "G",
+    "upper_column": "H",
+    "total_weight_cell": "B27",
+    "sieve_sizes": [80.00, 40.00, 20.00, 10.00, 4.75, "Pan"],
+    "lower_limits": [100.00, 90.00, 30.00, 10.00, 0.00, 0.00],
+    "upper_limits": [100.00, 100.00, 70.00, 35.00, 5.00, 0.00],
+}
+
+aggregate_20mm = {
+    "sieve_range": range(18, 23),
+    "sieve_column": "A",
+    "weight_column": "B",
+    "passing_column": "F",
+    "lower_column": "G",
+    "upper_column": "H",
+    "total_weight_cell": "B27",
+    "sieve_sizes": [40.00, 20.00, 10.00, 4.75, "Pan"],
+    "lower_limits": [100.00, 90.00, 25.00, 0.00, 0.00],
+    "upper_limits": [100.00, 100.00, 35.00, 10.00, 0.00],
+}
+
 materials = {
     "fine": fine_aggregate,
     "coarse1": coarse_aggregate1,
     "coarse2": coarse_aggregate2,
     "subbase": sub_base,
-    "crm": crm_base
+    "crm": crm_base,
+    "agg40": aggregate_40mm,
+    "agg20": aggregate_20mm,
 }

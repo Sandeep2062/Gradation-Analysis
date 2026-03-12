@@ -11,7 +11,9 @@ class TopTabs(ctk.CTkFrame):
             "coarse1": "Coarse Aggregate 1",
             "coarse2": "Coarse Aggregate 2",
             "subbase": "Sub-Base",
-            "crm": "CRM for Base"
+            "crm": "CRM for Base",
+            "agg40": "Aggregate 40 mm",
+            "agg20": "Aggregate 20 mm"
         }
 
         self.current = "fine"
@@ -20,17 +22,19 @@ class TopTabs(ctk.CTkFrame):
         self._build_tabs()
 
     def _build_tabs(self):
-        # Dynamic grid configuration for 5 tabs
-        for i in range(5):
-            self.grid_columnconfigure(i, weight=1)
-
         tabs_data = [
             ("fine", "⚙️ Fine Aggregate"),
             ("coarse1", "🏔️ Coarse Agg. 1"),
             ("coarse2", "🏔️ Coarse Agg. 2"),
-            ("subbase", "🏗️ Sub-Base"),
-            ("crm", "🔨 CRM for Base")
+            ("agg40", "🪨 Aggregate 40 mm"),
+            ("agg20", "🪨 Aggregate 20 mm"),
+            ("crm", "🔨 CRM for Base"),
+            ("subbase", "🏗️ Sub-Base")
         ]
+
+        # Dynamic grid configuration for all tabs
+        for i in range(len(tabs_data)):
+            self.grid_columnconfigure(i, weight=1)
 
         for idx, (key, label) in enumerate(tabs_data):
             is_active = key == "fine"
