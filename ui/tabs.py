@@ -7,7 +7,8 @@ class TopTabs(ctk.CTkFrame):
 
         self.callback = callback
         self.materials = {
-            "fine": "Fine Aggregate",
+            "fine": "Coarse Sand",
+            "finesand": "Fine Sand",
             "coarse1": "Coarse Aggregate 1",
             "coarse2": "Coarse Aggregate 2",
             "subbase": "Sub-Base",
@@ -23,7 +24,8 @@ class TopTabs(ctk.CTkFrame):
 
     def _build_tabs(self):
         tabs_data = [
-            ("fine", "⚙️ Fine Aggregate"),
+            ("fine", "⚙️ Coarse Sand"),
+            ("finesand", "⚙️ Fine Sand"),
             ("coarse1", "🏔️ Coarse Agg. 1"),
             ("coarse2", "🏔️ Coarse Agg. 2"),
             ("agg40", "🪨 Aggregate 40 mm"),

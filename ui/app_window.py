@@ -57,7 +57,7 @@ class GradationApp(ctk.CTk):
         footer = Footer(self)
         footer.grid(row=3, column=0, columnspan=2, sticky="e", padx=10, pady=(5,5))
 
-        # Initialize with Fine Aggregate data
+        # Initialize with Coarse Sand data
         self._on_material_change("fine")
         
         # Handle window close event
@@ -113,7 +113,7 @@ class GradationApp(ctk.CTk):
 
     def _on_material_change(self, material_key):
         """
-        Triggered when user switches tabs (Fine Aggregate / Sub-Base / Coarse Aggregate / CRM for Base)
+        Triggered when user switches material tabs.
         """
         # Load table first to initialize retained values
         self.table_panel.load_material(material_key)

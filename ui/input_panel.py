@@ -79,7 +79,7 @@ class InputPanel(ctk.CTkFrame):
         )
         self.fm_label.pack(pady=(10, 3))
 
-        # FM Zone label (for fine aggregate)
+        # FM Zone label (for sand materials)
         self.fm_zone_label = ctk.CTkLabel(
             self,
             text="",
@@ -98,8 +98,8 @@ class InputPanel(ctk.CTkFrame):
         fm_value = self.fm_calc.calculate_fm(retained_list)
         self.fm_label.configure(text=f"Fineness Modulus: {fm_value:.3f}")
 
-        # Show zone classification for fine aggregate
-        if self.material_key == "fine":
+        # Show zone classification for sand materials
+        if self.material_key in ("fine", "finesand"):
             if fm_value < 2.2:
                 zone = "Zone IV (Very Fine)"
                 color = "#f59e0b"

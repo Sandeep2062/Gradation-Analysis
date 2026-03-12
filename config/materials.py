@@ -11,6 +11,19 @@ fine_aggregate = {
     "upper_limits": [100.00, 100.00, 100.00, 90.00, 59.00, 30.00, 10.00, 0.00],
 }
 
+fine_sand = {
+    "sieve_range": range(20, 27),
+    "sieve_column": "A",
+    "weight_column": "B",
+    "passing_column": "F",
+    "lower_column": "G",
+    "upper_column": "H",
+    "total_weight_cell": "E17",
+    "sieve_sizes": [4.75, 2.36, 1.18, 0.60, 0.30, 0.15, "Pan"],
+    "lower_limits": [100.00, 90.00, 70.00, 40.00, 5.00, 0.00, 0.00],
+    "upper_limits": [100.00, 100.00, 100.00, 100.00, 70.00, 15.00, 0.00],
+}
+
 coarse_aggregate1 = {
     "sieve_range": range(18, 22),
     "sieve_column": "A",
@@ -91,6 +104,7 @@ aggregate_20mm = {
 
 materials = {
     "fine": fine_aggregate,
+    "finesand": fine_sand,
     "coarse1": coarse_aggregate1,
     "coarse2": coarse_aggregate2,
     "subbase": sub_base,
