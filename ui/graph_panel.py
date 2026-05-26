@@ -314,21 +314,13 @@ class GraphPanel(ctk.CTkFrame):
         self.ax.set_ylim(-5, 110)
         self.figure.tight_layout(pad=1.2)
 
-        # Draw without dynamic artists to capture clean background
-        self.canvas.draw()
-        self._background = self.canvas.copy_from_bbox(self.ax.bbox)
-
-        # Now make dynamic artists visible and draw them
+        # Draw normally
         self._obtained_glow.set_visible(True)
         self._obtained_line.set_visible(True)
-        self.ax.draw_artist(self._obtained_glow)
-        self.ax.draw_artist(self._obtained_line)
-        
         for artist in self._scatter_artists:
             artist.set_visible(True)
-            self.ax.draw_artist(artist)
             
-        self.canvas.blit(self.ax.bbox)
+        self.canvas.draw()
 
     def _fast_update_curve(self):
         """
@@ -432,6 +424,26 @@ class GraphPanel(ctk.CTkFrame):
                 self._redraw_graph()
                 return
             
+            # Capture clean background for blitting NOW, right before drag starts
+            self._obtained_glow.set_visible(False)
+            self._obtained_line.set_visible(False)
+            for artist in self._scatter_artists:
+                artist.set_visible(False)
+                
+            self.canvas.draw()
+            self._background = self.canvas.copy_from_bbox(self.ax.bbox)
+            
+            self._obtained_glow.set_visible(True)
+            self._obtained_line.set_visible(True)
+            for artist in self._scatter_artists:
+                artist.set_visible(True)
+                
+            self.ax.draw_artist(self._obtained_glow)
+            self.ax.draw_artist(self._obtained_line)
+            for artist in self._scatter_artists:
+                self.ax.draw_artist(artist)
+            self.canvas.blit(self.ax.bbox)
+
             self.drag_index = index
             self.selected_index = index
             
@@ -503,6 +515,12 @@ class GraphPanel(ctk.CTkFrame):
         self.drag_index = None
         self._drag_start_y = None
         self._drag_start_value = None
+
+    def _on_resize(self, event):
+        """Handle window resize."""
+        # Matplotlib handles resize normally. We don't need to manually redraw
+        # since we now capture the blitting background only on click.
+        pass
 
     def _on_key_up(self, event):
         """Handle Up arrow key to increase selected point's passing %"""
