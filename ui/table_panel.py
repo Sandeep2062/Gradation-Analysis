@@ -42,7 +42,7 @@ class TablePanel(ctk.CTkFrame):
 
         self.edit_hint = ctk.CTkLabel(
             header,
-            text="Double-click to edit  % Passing  or  Weight Retained",
+            text="Double-click to edit  % Passing  or  Weight Retained  |  🔒 = value protected",
             font=("Segoe UI", 10, "italic"),
             text_color="#64748b"
         )
@@ -151,6 +151,11 @@ class TablePanel(ctk.CTkFrame):
         row_count = len(self.sieve_sizes)
         self.passing = [(self.lower_limits[i] + self.upper_limits[i]) / 2 for i in range(row_count)]
         
+        # Enforce monotonicity on initial values
+        self.passing = self.grad_engine.enforce_monotonicity_table_order(
+            self.passing, self.lower_limits, self.upper_limits
+        )
+        
         # Calculate retained from passing values using gradation engine
         self.retained = self.grad_engine.passing_to_retained(self.passing)
 
@@ -188,8 +193,8 @@ class TablePanel(ctk.CTkFrame):
                 self.sieve_sizes[i],
                 f"{self.lower_limits[i]:.0f}",
                 f"{self.upper_limits[i]:.0f}",
-                f"{self.passing[i]:.1f}",
-                f"{int(round(retained_val))}",
+                f"{self.passing[i]:.2f}",
+                f"{retained_val:.1f}",
                 lock_icon
             )
             self.table.insert("", "end", values=row, tags=(tag,))
@@ -197,13 +202,13 @@ class TablePanel(ctk.CTkFrame):
         # Update summary bar
         target = self.total_weight_manager.get_total_weight()
         diff = abs(total_retained - target)
-        self.total_retained_label.configure(text=f"∑ Total Retained: {total_retained:.0f} g")
+        self.total_retained_label.configure(text=f"∑ Total Retained: {total_retained:.1f} g")
 
         if diff < 1:
             self.status_label.configure(text="✓ Balanced", text_color="#22c55e")
         else:
             self.status_label.configure(
-                text=f"⚠ Off by {diff:.0f}g (target: {target:.0f}g)",
+                text=f"⚠ Off by {diff:.1f}g (target: {target:.0f}g)",
                 text_color="#f59e0b"
             )
 
@@ -288,57 +293,10 @@ class TablePanel(ctk.CTkFrame):
         row_index = self.table.index(row_id)
 
         if col_index == 3:  # Passing % edited
-            # Clamp passing % to limits
-            new_val = max(self.lower_limits[row_index], min(self.upper_limits[row_index], new_val))
-            self.passing[row_index] = new_val
-            # Recalculate retained from passing
-            new_retained = self.grad_engine.passing_to_retained(self.passing)
+            self._handle_passing_edit(row_index, new_val)
 
-            # Preserve locked rows' retained values and redistribute difference
-            locked_indices = self.locked_rows - {row_index}
-            if locked_indices:
-                locked_total = sum(self.retained[j] for j in locked_indices)
-                # Keep locked retained values
-                for j in locked_indices:
-                    new_retained[j] = self.retained[j]
-                # Redistribute among unlocked rows
-                unlocked_indices = [j for j in range(len(new_retained)) if j not in locked_indices]
-                unlocked_total = sum(new_retained[j] for j in unlocked_indices)
-                target_unlocked = self.total_weight_manager.get_total_weight() - locked_total
-                if unlocked_total > 0 and target_unlocked >= 0:
-                    scale = target_unlocked / unlocked_total
-                    for j in unlocked_indices:
-                        new_retained[j] = max(0, new_retained[j] * scale)
-
-            self.retained = new_retained
-
-        elif col_index == 4:  # Weight retained edited — AUTO-ADJUST others
-            new_val = max(0, new_val)
-            total_weight = self.total_weight_manager.get_total_weight()
-            new_val = min(new_val, total_weight)  # Cannot exceed total
-
-            # Only adjust unlocked rows (excluding both current row and locked rows)
-            adjustable_indices = [j for j in range(len(self.retained)) if j != row_index and j not in self.locked_rows]
-            locked_total = sum(self.retained[j] for j in self.locked_rows if j != row_index)
-
-            self.retained[row_index] = new_val
-            remaining = total_weight - new_val - locked_total
-            remaining = max(0, remaining)
-
-            adjustable_total = sum(self.retained[j] for j in adjustable_indices)
-
-            if adjustable_total > 0 and remaining >= 0:
-                scale = remaining / adjustable_total
-                for j in adjustable_indices:
-                    self.retained[j] = max(0, self.retained[j] * scale)
-            elif len(adjustable_indices) > 0 and remaining > 0:
-                # All adjustable are zero — distribute equally
-                per_sieve = remaining / len(adjustable_indices)
-                for j in adjustable_indices:
-                    self.retained[j] = per_sieve
-
-            # Recalculate passing from the adjusted retained
-            self.passing = self._retained_to_passing(self.retained)
+        elif col_index == 4:  # Weight retained edited
+            self._handle_retained_edit(row_index, new_val)
 
         self._refresh_table()
 
@@ -347,36 +305,68 @@ class TablePanel(ctk.CTkFrame):
         parent.graph_panel.update_curve(self.passing)
         parent.input_panel.update_fm(self.retained)
 
-    def _retained_to_passing(self, retained_weights):
+    def _handle_passing_edit(self, row_index, new_val):
         """
-        Convert retained weights back to passing percentages.
-        This is the inverse of passing_to_retained.
+        Handle editing of % Passing value.
+        - Clamp to [lower_limit, upper_limit]
+        - Enforce monotonicity (non-increasing top→bottom)
+        - Locked rows are NEVER changed
+        - Recalculate retained from the corrected passing curve
         """
-        import numpy as np
-        retained = np.array(retained_weights, dtype=float)
-        
-        # Get total weight
-        total_wt = self.total_weight_manager.get_total_weight()
-        
-        if total_wt <= 0:
-            return [50.0] * len(retained)
-        
-        # Convert retained weights to fractions
-        retained_frac = retained / total_wt
-        retained_frac = np.clip(retained_frac, 0, None)
-        
-        # Convert retained fractions to passing fractions
-        passing_frac = np.zeros_like(retained_frac)
-        passing_frac[0] = 1 - retained_frac[0]
-        
-        for i in range(1, len(retained_frac)):
-            passing_frac[i] = passing_frac[i-1] - retained_frac[i]
-        
-        # Clip to valid range [0, 1] and convert to percentages [0, 100]
-        passing_frac = np.clip(passing_frac, 0, 1)
-        passing = passing_frac * 100
-        
-        return passing.tolist()
+        # Clamp to limits
+        new_val = max(self.lower_limits[row_index], min(self.upper_limits[row_index], new_val))
+        self.passing[row_index] = new_val
+
+        # Enforce monotonicity across entire curve, preserving locks
+        self.passing = self.grad_engine.enforce_monotonicity_table_order(
+            self.passing, self.lower_limits, self.upper_limits, self.locked_rows
+        )
+
+        # Recalculate all retained from the corrected passing curve
+        self.retained = self.grad_engine.passing_to_retained(self.passing)
+
+    def _handle_retained_edit(self, row_index, new_val):
+        """
+        Handle editing of Weight Retained value.
+        - Auto-clamp to [0, max_possible] where max_possible = total_weight - locked_total
+        - If user enters 99999, it becomes max_possible
+        - If user enters negative, it becomes 0
+        - Locked rows are NEVER changed
+        - Redistribute remaining weight among unlocked rows proportionally
+        - Recalculate passing from the adjusted retained values
+        - Enforce monotonicity on resulting passing curve
+        """
+        total_weight = self.total_weight_manager.get_total_weight()
+
+        # Compute the maximum this row can hold without touching locked rows
+        max_val = self.grad_engine.compute_max_retained(
+            row_index, self.retained, self.locked_rows,
+            self.lower_limits, self.upper_limits
+        )
+
+        # Auto-clamp: huge values → max, negative → 0
+        new_val = max(0, min(new_val, max_val))
+
+        # Use engine to redistribute among unlocked rows
+        self.retained = self.grad_engine.adjust_retained_with_locks(
+            self.retained, row_index, new_val, self.locked_rows
+        )
+
+        # Recalculate passing from the adjusted retained
+        self.passing = self.grad_engine.retained_to_passing(self.retained)
+
+        # Clamp passing to limits (don't let it go outside the envelope)
+        for i in range(len(self.passing)):
+            if i not in self.locked_rows:
+                self.passing[i] = max(self.lower_limits[i], min(self.upper_limits[i], self.passing[i]))
+
+        # Enforce monotonicity
+        self.passing = self.grad_engine.enforce_monotonicity_table_order(
+            self.passing, self.lower_limits, self.upper_limits, self.locked_rows
+        )
+
+        # Final: re-derive retained from the corrected passing to ensure consistency
+        self.retained = self.grad_engine.passing_to_retained(self.passing)
 
     # ----------------------------------------------------
     # PUBLIC API
@@ -389,11 +379,11 @@ class TablePanel(ctk.CTkFrame):
         return self.sieve_sizes
 
     def update_passing(self, new_curve):
-        self.passing = new_curve
+        self.passing = list(new_curve)
         self._refresh_table()
 
     def update_retained(self, new_retained):
-        self.retained = new_retained
+        self.retained = list(new_retained)
         self._refresh_table()
 
     # ----------------------------------------------------
@@ -425,3 +415,8 @@ class TablePanel(ctk.CTkFrame):
             self.locked_rows.add(row_index)
 
         self._refresh_table()
+        
+        # Also update graph to show lock status on points
+        parent = self.master
+        if hasattr(parent, 'graph_panel'):
+            parent.graph_panel._redraw_graph()

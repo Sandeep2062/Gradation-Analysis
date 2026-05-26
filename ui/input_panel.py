@@ -40,7 +40,8 @@ class InputPanel(ctk.CTkFrame):
             fg_color="#252d3d", border_color="#0891b2", border_width=2,
             text_color="white", font=("Segoe UI", 13), justify="center"
         )
-        self.total_entry.insert(0, "5000")
+        # Default will be set by load_material / set_weight_display
+        self.total_entry.insert(0, "2000")
         self.total_entry.pack(pady=8)
 
         self.total_entry.bind("<KeyRelease>", lambda e: self._on_change_total_weight())
@@ -93,6 +94,16 @@ class InputPanel(ctk.CTkFrame):
     def load_material(self, material_key):
         self.material_key = material_key
         self.data = materials[material_key]
+        
+        # Set material-specific default weight
+        default_weight = self.data.get("default_weight", 5000)
+        self.set_weight_display(default_weight)
+
+    def set_weight_display(self, value):
+        """Update the weight entry field and propagate the change."""
+        self.total_entry.delete(0, "end")
+        self.total_entry.insert(0, str(int(value)))
+        self._on_change_total_weight()
 
     def update_fm(self, retained_list):
         fm_value = self.fm_calc.calculate_fm(retained_list)
@@ -123,6 +134,9 @@ class InputPanel(ctk.CTkFrame):
         try:
             weight = float(self.total_entry.get())
         except:
+            return
+
+        if weight <= 0:
             return
 
         self.total_weight_manager.set_total_weight(weight)
@@ -157,4 +171,3 @@ class InputPanel(ctk.CTkFrame):
         retained = parent.table_panel.grad_engine.passing_to_retained(random_curve)
         parent.table_panel.update_retained(retained)
         self.update_fm(retained)
-

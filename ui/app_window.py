@@ -115,8 +115,21 @@ class GradationApp(ctk.CTk):
         """
         Triggered when user switches material tabs.
         """
-        # Load table first to initialize retained values
-        self.table_panel.load_material(material_key)
-        # Then load other panels
+        from config.materials import materials
+        
+        # Set material-specific default weight FIRST
+        mat_data = materials[material_key]
+        default_weight = mat_data.get("default_weight", 5000)
+        self.total_weight_manager.set_total_weight(default_weight)
+        
+        # Load input panel (updates weight display)
         self.input_panel.load_material(material_key)
+        
+        # Load table (uses the new weight for retained calculation)
+        self.table_panel.load_material(material_key)
+        
+        # Load graph
         self.graph_panel.load_material(material_key)
+        
+        # Final sync: update FM from initial retained values
+        self.input_panel.update_fm(self.table_panel.retained)
