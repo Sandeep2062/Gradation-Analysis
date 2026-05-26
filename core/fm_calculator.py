@@ -1,6 +1,9 @@
 class FMCalculator:
 
     def calculate_fm(self, retained_list):
+        if not retained_list or len(retained_list) == 0:
+            return 0.0
+            
         cumulative = []
         running = 0
 

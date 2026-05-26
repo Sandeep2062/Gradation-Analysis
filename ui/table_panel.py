@@ -178,7 +178,7 @@ class TablePanel(ctk.CTkFrame):
             else:
                 tag = "oddrow"
 
-            lock_icon = "🔒" if i in self.locked_rows else "🔓"
+            lock_icon = "[ Locked ]" if i in self.locked_rows else "[   ]"
 
             # Use locked tag variants for locked rows
             if i in self.locked_rows:
@@ -309,43 +309,37 @@ class TablePanel(ctk.CTkFrame):
         """
         Handle editing of % Passing value.
         - Clamp to [lower_limit, upper_limit]
-        - Enforce monotonicity (non-increasing top→bottom)
-        - Locked rows are NEVER changed
-        - Recalculate retained from the corrected passing curve
+        - Sync to ensure we NEVER change locked retained weights
         """
         # Clamp to limits
         new_val = max(self.lower_limits[row_index], min(self.upper_limits[row_index], new_val))
         self.passing[row_index] = new_val
 
-        # Enforce monotonicity across entire curve, preserving locks
-        self.passing = self.grad_engine.enforce_monotonicity_table_order(
-            self.passing, self.lower_limits, self.upper_limits, self.locked_rows
+        # Sync using the engine to protect locked retained values
+        self.passing, self.retained = self.grad_engine.sync_passing_with_locks(
+            self.passing, 
+            self.retained, 
+            self.locked_rows, 
+            self.lower_limits, 
+            self.upper_limits
         )
-
-        # Recalculate all retained from the corrected passing curve
-        self.retained = self.grad_engine.passing_to_retained(self.passing)
 
     def _handle_retained_edit(self, row_index, new_val):
         """
         Handle editing of Weight Retained value.
-        - Auto-clamp to [0, max_possible] where max_possible = total_weight - locked_total
-        - If user enters 99999, it becomes max_possible
-        - If user enters negative, it becomes 0
+        - Auto-clamp to physically valid [min_allowed, max_allowed] required by envelope.
         - Locked rows are NEVER changed
         - Redistribute remaining weight among unlocked rows proportionally
         - Recalculate passing from the adjusted retained values
-        - Enforce monotonicity on resulting passing curve
         """
-        total_weight = self.total_weight_manager.get_total_weight()
-
-        # Compute the maximum this row can hold without touching locked rows
-        max_val = self.grad_engine.compute_max_retained(
+        # Calculate the absolute mathematical bounds for this row to stay inside limits
+        min_val, max_val = self.grad_engine.compute_valid_retained_range(
             row_index, self.retained, self.locked_rows,
             self.lower_limits, self.upper_limits
         )
 
-        # Auto-clamp: huge values → max, negative → 0
-        new_val = max(0, min(new_val, max_val))
+        # Auto-clamp user input so it NEVER breaks limits
+        new_val = max(min_val, min(new_val, max_val))
 
         # Use engine to redistribute among unlocked rows
         self.retained = self.grad_engine.adjust_retained_with_locks(
@@ -353,20 +347,8 @@ class TablePanel(ctk.CTkFrame):
         )
 
         # Recalculate passing from the adjusted retained
+        # Since all retained values are >= 0, passing is guaranteed to be monotonic.
         self.passing = self.grad_engine.retained_to_passing(self.retained)
-
-        # Clamp passing to limits (don't let it go outside the envelope)
-        for i in range(len(self.passing)):
-            if i not in self.locked_rows:
-                self.passing[i] = max(self.lower_limits[i], min(self.upper_limits[i], self.passing[i]))
-
-        # Enforce monotonicity
-        self.passing = self.grad_engine.enforce_monotonicity_table_order(
-            self.passing, self.lower_limits, self.upper_limits, self.locked_rows
-        )
-
-        # Final: re-derive retained from the corrected passing to ensure consistency
-        self.retained = self.grad_engine.passing_to_retained(self.passing)
 
     # ----------------------------------------------------
     # PUBLIC API

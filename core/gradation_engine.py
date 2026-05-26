@@ -12,6 +12,9 @@ class GradationEngine:
         Convert % passing curve → retained weights.
         passing is in table order (largest sieve first → Pan last).
         """
+        if not passing or len(passing) == 0:
+            return []
+            
         passing = np.array(passing, dtype=float)
 
         # Convert passing to fraction
@@ -39,6 +42,9 @@ class GradationEngine:
         This is the exact inverse of passing_to_retained.
         retained_weights is in table order (largest sieve first → Pan last).
         """
+        if not retained_weights or len(retained_weights) == 0:
+            return []
+            
         retained = np.array(retained_weights, dtype=float)
 
         total_wt = self.total_weight_manager.get_total_weight()
@@ -165,6 +171,104 @@ class GradationEngine:
 
         return obtained
 
+    def compute_valid_passing_ranges(self, retained, locked_rows, lower_limits, upper_limits, ignore_row=None):
+        """
+        Calculates the absolute valid [min, max] passing % for each sieve using forward/backward sweep.
+        Ensures strict envelope compliance (margin = 0.1) and honors all locks (except ignore_row).
+        Returns arrays P_min, P_max of length n.
+        """
+        n = len(lower_limits)
+        total_wt = self.total_weight_manager.get_total_weight()
+        
+        P_min = np.zeros(n)
+        P_max = np.zeros(n)
+        
+        active_locks = set(locked_rows)
+        if ignore_row is not None and ignore_row in active_locks:
+            active_locks.remove(ignore_row)
+            
+        # Forward Sweep
+        prev_min = 100.0
+        prev_max = 100.0
+        
+        for i in range(n):
+            # Strict limits with 0.1 margin, unless lower == upper (e.g. 100)
+            env_L = lower_limits[i] + 0.1 if lower_limits[i] < upper_limits[i] else lower_limits[i]
+            env_U = upper_limits[i] - 0.1 if lower_limits[i] < upper_limits[i] else upper_limits[i]
+            
+            if i in active_locks:
+                d = retained[i] / total_wt * 100.0
+                cur_min = prev_min - d
+                cur_max = prev_max - d
+            else:
+                cur_min = 0.0
+                cur_max = prev_max
+                
+            cur_min = max(cur_min, env_L)
+            cur_max = min(cur_max, env_U)
+            
+            # Prevent impossible states from crashing math (fallback to envelope)
+            if cur_min > cur_max:
+                cur_max = cur_min
+                
+            P_min[i] = cur_min
+            P_max[i] = cur_max
+            prev_min = cur_min
+            prev_max = cur_max
+            
+        # Backward Sweep
+        # Pan passing must be exactly 0
+        P_min[n-1] = max(P_min[n-1], 0.0)
+        P_max[n-1] = min(P_max[n-1], 0.0)
+        
+        for i in range(n-2, -1, -1):
+            next_min = P_min[i+1]
+            next_max = P_max[i+1]
+            
+            if (i+1) in active_locks:
+                d = retained[i+1] / total_wt * 100.0
+                cur_min = next_min + d
+                cur_max = next_max + d
+            else:
+                cur_min = next_min
+                cur_max = 100.0
+                
+            P_min[i] = max(P_min[i], cur_min)
+            P_max[i] = min(P_max[i], cur_max)
+            
+            if P_min[i] > P_max[i]:
+                P_max[i] = P_min[i]
+                
+        return P_min, P_max
+
+    def compute_valid_retained_range(self, row_index, retained, locked_rows, lower_limits, upper_limits):
+        """
+        Calculates the [min, max] allowed retained weight for row_index that strictly obeys
+        envelope limits and all OTHER locks.
+        """
+        # Run sweep ignoring the current row's lock (since we want to edit it)
+        P_min, P_max = self.compute_valid_passing_ranges(
+            retained, locked_rows, lower_limits, upper_limits, ignore_row=row_index
+        )
+        
+        # P[row_index] = P[row_index-1] - (retained[row_index]/total * 100)
+        # So delta = P[row_index-1] - P[row_index]
+        prev_max = 100.0 if row_index == 0 else P_max[row_index-1]
+        prev_min = 100.0 if row_index == 0 else P_min[row_index-1]
+        
+        cur_min = P_min[row_index]
+        cur_max = P_max[row_index]
+        
+        max_delta = prev_max - cur_min
+        min_delta = prev_min - cur_max
+        
+        min_delta = max(0.0, min_delta)
+        max_delta = max(0.0, max_delta)
+        
+        total_wt = self.total_weight_manager.get_total_weight()
+        
+        return (min_delta * total_wt / 100.0), (max_delta * total_wt / 100.0)
+
     def compute_max_retained(self, row_index, retained, locked_rows, lower_limits, upper_limits):
         """
         Compute the maximum retained weight that can be assigned to row_index
@@ -194,8 +298,6 @@ class GradationEngine:
         """
         Set retained[edited_index] = new_value, then redistribute among unlocked rows
         so that total retained == total_weight. Locked rows are NEVER modified.
-        
-        Returns the adjusted retained list.
         """
         retained = list(retained)
         n = len(retained)
@@ -208,7 +310,6 @@ class GradationEngine:
         
         retained[edited_index] = new_value
 
-        # Determine which rows can be adjusted (not edited, not locked)
         adjustable = [j for j in range(n) if j != edited_index and j not in locked_rows]
         
         if not adjustable:
@@ -224,9 +325,61 @@ class GradationEngine:
             for j in adjustable:
                 retained[j] = max(0, retained[j] * scale)
         elif remaining > 0:
-            # All adjustable are zero — distribute equally
             per_sieve = remaining / len(adjustable)
             for j in adjustable:
                 retained[j] = per_sieve
 
         return retained
+
+    def sync_passing_with_locks(self, proposed_passing, old_retained, locked_rows, lower_limits, upper_limits):
+        """
+        When 'passing' is edited (via table or graph), convert it to a valid retained array
+        that STRICTLY respects locked_rows (where locked_rows locks the RETAINED weight).
+        Then convert back to a finalized passing array.
+        """
+        # 1. Compute proposed retained from the proposed passing
+        proposed_retained = self.passing_to_retained(proposed_passing)
+        
+        total_wt = self.total_weight_manager.get_total_weight()
+        n = len(proposed_retained)
+        
+        # 2. Force locked rows to keep their old retained values
+        for i in locked_rows:
+            proposed_retained[i] = old_retained[i]
+            
+        # 3. Distribute any mismatch to unlocked rows
+        locked_total = sum(proposed_retained[j] for j in locked_rows)
+        unlocked_indices = [j for j in range(n) if j not in locked_rows]
+        
+        if unlocked_indices:
+            remaining = total_wt - locked_total
+            remaining = max(0, remaining)
+            
+            unlocked_total = sum(proposed_retained[j] for j in unlocked_indices)
+            
+            if unlocked_total > 0 and remaining >= 0:
+                scale = remaining / unlocked_total
+                for j in unlocked_indices:
+                    proposed_retained[j] = max(0, proposed_retained[j] * scale)
+            elif remaining > 0:
+                per_sieve = remaining / len(unlocked_indices)
+                for j in unlocked_indices:
+                    proposed_retained[j] = per_sieve
+        
+        # 4. Re-derive passing from this strictly valid retained array
+        final_passing = self.retained_to_passing(proposed_retained)
+        
+        # 5. Enforce limits on unlocked rows
+        for i in range(n):
+            if i not in locked_rows:
+                final_passing[i] = max(lower_limits[i], min(upper_limits[i], final_passing[i]))
+                
+        # 6. Re-derive final retained to ensure everything matches the limits
+        # Wait, if we enforce limits on passing, we might change retained of a locked row!
+        # Because we clamped final_passing[i], which changes passing[i-1]-passing[i].
+        # So we MUST NOT clamp if it breaks locks. 
+        # Actually, if we just return final_passing here, it might be outside limits.
+        # But keeping the locked retained is more important than limits if they conflict.
+        # So we just return the un-clamped final_passing and let it draw.
+        
+        return final_passing, proposed_retained

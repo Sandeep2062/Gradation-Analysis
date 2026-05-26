@@ -267,9 +267,9 @@ class GraphPanel(ctk.CTkFrame):
         self.ax.plot(x_smooth, lower_smooth, color="#64748b", linewidth=1.5, linestyle="--", alpha=0.6, label="Lower Limit")
         self.ax.plot(x_smooth, upper_smooth, color="#64748b", linewidth=1.5, linestyle="--", alpha=0.6, label="Upper Limit")
 
-        # Obtained curve with glow effect
-        self._obtained_glow, = self.ax.plot(x_smooth, obtained_smooth, color="#0ea5e9", linewidth=5, alpha=0.12, zorder=2)
-        self._obtained_line, = self.ax.plot(x_smooth, obtained_smooth, color="#06b6d4", linewidth=2.5, label="Obtained", zorder=3)
+        # Obtained curve with glow effect (hidden initially for background capture)
+        self._obtained_glow, = self.ax.plot(x_smooth, obtained_smooth, color="#0ea5e9", linewidth=5, alpha=0.12, zorder=2, visible=False)
+        self._obtained_line, = self.ax.plot(x_smooth, obtained_smooth, color="#06b6d4", linewidth=2.5, label="Obtained", zorder=3, visible=False)
 
         # Draggable points with selection + lock highlighting
         self._scatter_artists = []
@@ -281,15 +281,15 @@ class GraphPanel(ctk.CTkFrame):
                 # Locked point — red ring, can't be dragged
                 artist = self.ax.scatter(self.sieve_sizes[i], self.obtained[i],
                     color="#ef4444", s=100, edgecolor="#fca5a5", zorder=6, linewidth=2.5,
-                    marker='s')  # Square for locked
+                    marker='s', visible=False)
             elif is_selected:
                 # Selected point — gold highlight
                 artist = self.ax.scatter(self.sieve_sizes[i], self.obtained[i],
-                    color="#f59e0b", s=130, edgecolor="#fbbf24", zorder=6, linewidth=2.5)
+                    color="#f59e0b", s=130, edgecolor="#fbbf24", zorder=6, linewidth=2.5, visible=False)
             else:
                 # Normal point
                 artist = self.ax.scatter(self.sieve_sizes[i], self.obtained[i],
-                    color="#22d3ee", s=80, edgecolor="white", zorder=5, linewidth=1.5)
+                    color="#22d3ee", s=80, edgecolor="white", zorder=5, linewidth=1.5, visible=False)
             self._scatter_artists.append(artist)
 
         # Smart sieve labels
@@ -314,9 +314,21 @@ class GraphPanel(ctk.CTkFrame):
         self.ax.set_ylim(-5, 110)
         self.figure.tight_layout(pad=1.2)
 
+        # Draw without dynamic artists to capture clean background
         self.canvas.draw()
-        # Cache background for blitting
         self._background = self.canvas.copy_from_bbox(self.ax.bbox)
+
+        # Now make dynamic artists visible and draw them
+        self._obtained_glow.set_visible(True)
+        self._obtained_line.set_visible(True)
+        self.ax.draw_artist(self._obtained_glow)
+        self.ax.draw_artist(self._obtained_line)
+        
+        for artist in self._scatter_artists:
+            artist.set_visible(True)
+            self.ax.draw_artist(artist)
+            
+        self.canvas.blit(self.ax.bbox)
 
     def _fast_update_curve(self):
         """
@@ -422,32 +434,53 @@ class GraphPanel(ctk.CTkFrame):
             
             self.drag_index = index
             self.selected_index = index
+            
+            # Compute absolute valid bounds for this drag to prevent breaking limits/locks
+            parent = self.master
+            if hasattr(parent, 'table_panel'):
+                P_min, P_max = self.grad_engine.compute_valid_passing_ranges(
+                    parent.table_panel.retained,
+                    parent.table_panel.locked_rows,
+                    parent.table_panel.lower_limits,
+                    parent.table_panel.upper_limits
+                )
+                table_idx = len(self.obtained) - 1 - index
+                self._drag_min_passing = P_min[table_idx]
+                self._drag_max_passing = P_max[table_idx]
+            else:
+                self._drag_min_passing = 0.0
+                self._drag_max_passing = 100.0
+                
             self._drag_start_y = event.ydata
             self._drag_start_value = float(self.obtained[index])
             self._update_entry_field()
 
     def _on_drag(self, event):
-        if self.drag_index is None:
-            return
-        if event.inaxes != self.ax:
-            return
-
-        idx = self.drag_index
-
-        if self.shift_held and self._drag_start_y is not None:
-            # Precision mode: scale movement by 0.1
-            delta = event.ydata - self._drag_start_y
-            y = self._drag_start_value + delta * 0.1
-        else:
+        if self.drag_index is not None:
+            if event.ydata is None:
+                return
+            idx = self.drag_index
+            
+            # Raw coordinate
             y = event.ydata
 
-        # Apply snap
-        y = self._apply_snap(y)
+            # Apply snap/precision logic
+            if self.shift_held and self._drag_start_y is not None:
+                # Precision mode: scale movement by 0.1
+                delta = event.ydata - self._drag_start_y
+                y = self._drag_start_value + delta * 0.1
+            else:
+                # Apply snap
+                y = self._apply_snap(y)
+            
+            # Strictly clamp to physically valid mathematical limits
+            if hasattr(self, '_drag_min_passing'):
+                y = max(self._drag_min_passing, min(self._drag_max_passing, y))
+            else:
+                y = max(self.lower[idx], min(self.upper[idx], y))
 
-        # Clamp inside limits
-        y = max(self.lower[idx], min(self.upper[idx], y))
-
-        self.obtained[idx] = y
+            # Store the proposed y
+            self.obtained[idx] = y
 
         # Enforce monotonicity in graph order (non-decreasing left→right)
         locked_graph = self._get_locked_graph_indices()
@@ -628,11 +661,21 @@ class GraphPanel(ctk.CTkFrame):
         # Reverse obtained curve from graph order (small to large) back to table order (large to small)
         table_passing = list(reversed(self.obtained))
         
-        # Calculate retained based on passing
-        retained = self.grad_engine.passing_to_retained(table_passing)
+        # Protect locked retained weights!
+        # If user dragged a point, it creates a proposed passing curve. We must snap it to respect locks.
+        final_passing, retained = self.grad_engine.sync_passing_with_locks(
+            table_passing, 
+            parent.table_panel.retained, 
+            parent.table_panel.locked_rows, 
+            parent.table_panel.lower_limits, 
+            parent.table_panel.upper_limits
+        )
+        
+        # The graph might have been forced to snap to satisfy the locked retained weights.
+        self.obtained = np.array(list(reversed(final_passing)), dtype=float)
 
         # Update both passing and retained in table atomically
-        parent.table_panel.passing = table_passing
+        parent.table_panel.passing = final_passing
         parent.table_panel.retained = retained
         parent.table_panel._refresh_table()
 

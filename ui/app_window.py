@@ -122,11 +122,11 @@ class GradationApp(ctk.CTk):
         default_weight = mat_data.get("default_weight", 5000)
         self.total_weight_manager.set_total_weight(default_weight)
         
-        # Load input panel (updates weight display)
-        self.input_panel.load_material(material_key)
-        
         # Load table (uses the new weight for retained calculation)
         self.table_panel.load_material(material_key)
+
+        # Load input panel (updates weight display)
+        self.input_panel.load_material(material_key)
         
         # Load graph
         self.graph_panel.load_material(material_key)
